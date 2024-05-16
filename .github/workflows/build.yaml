@@ -58,8 +58,6 @@ jobs:
           - ubuntu-latest
 
         rust:
-          - stable
-          - beta
           - nightly
 
     name: tests/${{ matrix.os }}/${{ matrix.rust }}
