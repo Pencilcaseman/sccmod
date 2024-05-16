@@ -11,7 +11,7 @@ name: Continuous integration
 
 env:
   CARGO_TERM_COLOR: always
-  FEATURES: "test docs"
+  FEATURES: ""
 
 jobs:
   clippy:
