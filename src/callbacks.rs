@@ -1,5 +1,90 @@
-use crate::{config, log, module::get_modules};
+use crate::{
+    config, log, module,
+    module::{get_modules, Module},
+    module_resolver,
+};
 use colored::Colorize;
+use std::io::Write;
+
+/// Internal boilerplate handler which, given a set of partials and a function,
+/// finds the specified module and passes it to the function.
+///
+/// # Errors
+/// Errors if the module selection process fails or if the provided function
+/// return an error.
+pub fn resolver_boilerplate(
+    partials: &[&str],
+    func: fn(&Module) -> Result<(), String>,
+) -> Result<(), String> {
+    match module_resolver::resolve(partials)? {
+        module_resolver::ResolveMatch::Full(m) => func(&m),
+        module_resolver::ResolveMatch::Partial(m) => {
+            let mut err = String::from("Multiple modules match the provided partials:\n");
+
+            // Always valid, as `m.len()` >= 1, so `log(m.len())` >= 0
+            #[allow(
+                clippy::cast_possible_truncation,
+                clippy::cast_sign_loss,
+                clippy::cast_precision_loss
+            )]
+            let max_digits = (m.len() as f64).log10() as usize + 1;
+
+            for (index, item) in m.iter().enumerate() {
+                // Always valid, as `item` >= 0, so `log(item + 1)` >= 0
+                #[allow(
+                    clippy::cast_possible_truncation,
+                    clippy::cast_sign_loss,
+                    clippy::cast_precision_loss
+                )]
+                let digits = ((index + 1) as f64).log10() as usize;
+
+                let mut index_str = String::from(" ").repeat(max_digits - digits);
+                index_str.push_str(&format!("{index}"));
+
+                err.push_str(&format!(
+                    "  {index_str}: {}\n",
+                    item.identifier.bold().cyan()
+                ));
+            }
+
+            log::warn(&err);
+
+            let mut valid = false;
+            let mut selection = String::new();
+            let mut selection_index = 0;
+
+            while !valid {
+                print!("{}", "Please enter a selection: ".yellow().bold());
+                std::io::stdout().flush().map_err(|e| e.to_string())?;
+
+                match std::io::stdin().read_line(&mut selection) {
+                    Ok(_) => match selection.trim().parse::<usize>() {
+                        Ok(num) if num < m.len() => {
+                            valid = true;
+                            selection_index = num;
+                        }
+                        Ok(_) => {
+                            log::warn("Invalid index selected");
+                        }
+                        Err(_) => {
+                            log::warn("Invalid input received. Input must be a positive integer");
+                        }
+                    },
+                    Err(_) => {
+                        log::warn("Failed to read input");
+                    }
+                }
+
+                selection.clear(); // Clear the input buffer for the next iteration
+            }
+
+            func(&m[selection_index])
+        }
+        module_resolver::ResolveMatch::None => {
+            log::error("No modules match the partials provided");
+        }
+    }
+}
 
 /// A callback function to list all available modules
 ///
@@ -22,15 +107,8 @@ pub fn list_callback(_config: &config::Config) -> Result<(), String> {
 ///
 /// Will error if a single module cannot be resolved from the specified name,
 /// or if the call to [`Module.download`] fails.
-pub fn download_module(name: &str, _config: &config::Config) -> Result<(), String> {
-    for module in &get_modules()? {
-        if name == module.identifier {
-            log::status(&format!("Downloading '{}'", module.identifier));
-            module.download(&module.download_path)?;
-        }
-    }
-
-    Ok(())
+pub fn download_module(partials: &[&str], _config: &config::Config) -> Result<(), String> {
+    resolver_boilerplate(partials, module::download)
 }
 
 /// A callback function to build a module based on its name.
@@ -39,18 +117,8 @@ pub fn download_module(name: &str, _config: &config::Config) -> Result<(), Strin
 ///
 /// Errors if a single module cannot be resolved from the specified name,
 /// or if the call to [`Module.build`] fails.
-pub fn build_module(name: &str, _config: &config::Config) -> Result<(), String> {
-    for module in &get_modules()? {
-        if name == module.identifier {
-            log::status(&format!("Downloading '{}'", module.identifier));
-            module.download(&module.download_path)?;
-
-            log::status(&format!("Building '{}'", module.identifier));
-            module.build(&module.download_path, &module.install_path)?;
-        }
-    }
-
-    Ok(())
+pub fn build_module(partials: &[&str], _config: &config::Config) -> Result<(), String> {
+    resolver_boilerplate(partials, module::build)
 }
 
 /// A callback function to install a module from its name.
@@ -59,19 +127,6 @@ pub fn build_module(name: &str, _config: &config::Config) -> Result<(), String> 
 ///
 /// Returns [`Err(string)`] if a single module cannot be resolved from the
 /// specified name, or if the call to [`Module.install`] fails.
-pub fn install_module(name: &str, _config: &config::Config) -> Result<(), String> {
-    for module in &get_modules()? {
-        if name == module.identifier {
-            log::status(&format!("Downloading '{}'", module.identifier));
-            module.download(&module.download_path)?;
-
-            log::status(&format!("Building '{}'", module.identifier));
-            module.build(&module.download_path, &module.build_path)?;
-
-            log::status(&format!("Installing '{}'", module.identifier));
-            module.install(&module.build_path, &module.install_path)?;
-        }
-    }
-
-    Ok(())
+pub fn install_module(partials: &[&str], _config: &config::Config) -> Result<(), String> {
+    resolver_boilerplate(partials, module::install)
 }

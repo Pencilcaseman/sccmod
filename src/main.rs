@@ -1,4 +1,4 @@
-use sccmod::{callbacks, cli, config};
+use sccmod::{callbacks, cli, cli::NumParams, config};
 
 #[allow(clippy::cognitive_complexity)]
 fn main() -> Result<(), String> {
@@ -29,6 +29,7 @@ fn cli(config: &config::Config) -> Result<(), String> {
                 arguments: vec![cli::Arg {
                     name: "module",
                     help: "Download the specified module",
+                    num_params: NumParams::Any,
                     callback: callbacks::download_module,
                 }],
                 help: "Download a module",
@@ -40,6 +41,7 @@ fn cli(config: &config::Config) -> Result<(), String> {
                 arguments: vec![cli::Arg {
                     name: "module",
                     help: "Build the specified module",
+                    num_params: NumParams::Any,
                     callback: callbacks::build_module,
                 }],
                 help: "Build a module",
@@ -51,6 +53,7 @@ fn cli(config: &config::Config) -> Result<(), String> {
                 arguments: vec![cli::Arg {
                     name: "module",
                     help: "Install the specified module",
+                    num_params: NumParams::Any,
                     callback: callbacks::install_module,
                 }],
                 help: "Install a module",

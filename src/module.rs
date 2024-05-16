@@ -225,7 +225,7 @@ pub fn build(module: &Module) -> Result<(), String> {
     download(module)?;
 
     log::status(&format!("Building '{}'", module.identifier));
-    module.build(&module.download_path, &module.install_path)
+    module.build(&module.download_path, &module.build_path)
 }
 
 /// Download, build and install a module.

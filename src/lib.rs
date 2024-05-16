@@ -16,4 +16,5 @@ pub mod file_manager;
 pub mod info;
 pub mod log;
 pub mod module;
+pub mod module_resolver;
 pub mod python_interop;

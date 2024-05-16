@@ -98,12 +98,18 @@ pub fn child_logger(
     (spawn.wait(), stdout, stderr)
 }
 
+pub enum NumParams {
+    Single,
+    Multi(usize),
+    Any,
+}
+
 pub trait CommandBuilder {
     #[must_use]
     fn add_subcommand(self, cmd: clap::Command) -> Self;
 
     #[must_use]
-    fn add_argument(self, name: &'static str, help: &'static str) -> Self;
+    fn add_argument(self, name: &'static str, help: &'static str, num_params: &NumParams) -> Self;
 }
 
 #[must_use]
@@ -116,17 +122,29 @@ impl CommandBuilder for clap::Command {
         self.subcommand(cmd)
     }
 
-    fn add_argument(self, name: &'static str, help: &'static str) -> Self {
-        self.arg(clap::Arg::new(name).help(help))
+    fn add_argument(self, name: &'static str, help: &'static str, num_params: &NumParams) -> Self {
+        self.arg(
+            clap::Arg::new(name)
+                .help(help)
+                .num_args(
+                    1..=match num_params {
+                        NumParams::Single => 1,
+                        NumParams::Multi(n) => *n,
+                        NumParams::Any => usize::MAX,
+                    },
+                )
+                .action(clap::ArgAction::Set),
+        )
     }
 }
 
 type CommandCallback = fn(&config::Config) -> Result<(), String>;
-type ArgumentCallback = fn(&str, &config::Config) -> Result<(), String>;
+type ArgumentCallback = fn(&[&str], &config::Config) -> Result<(), String>;
 
 pub struct Arg {
     pub name: &'static str,
     pub help: &'static str,
+    pub num_params: NumParams,
     pub callback: ArgumentCallback,
 }
 
@@ -160,7 +178,7 @@ impl Command {
         res = res.about(self.help);
 
         for arg in &self.arguments {
-            res = res.add_argument(arg.name, arg.help);
+            res = res.add_argument(arg.name, arg.help, &arg.num_params);
         }
 
         res
@@ -178,8 +196,18 @@ impl Command {
     ) -> Result<(), String> {
         let mut arg_count = 0;
         for arg in &self.arguments {
-            if let Some(value) = matches.get_one::<String>(arg.name) {
-                (arg.callback)(value, config)?;
+            // if let Some(value) = matches.get_one::<String>(arg.name) {
+            //     (arg.callback)(value, config)?;
+            //     arg_count += 1;
+
+            //     if arg_count > 1 {
+            //         return Err("Too many arguments passed".to_string());
+            //     }
+            // }
+
+            if let Some(values) = matches.get_many::<String>(arg.name) {
+                let values: Vec<&str> = values.map(std::string::String::as_str).collect();
+                (arg.callback)(&values, config)?;
                 arg_count += 1;
 
                 if arg_count > 1 {

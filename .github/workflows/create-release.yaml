@@ -26,6 +26,9 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
+      - name: Clean Source Code
+        run: cargo clean
+
       - name: Zip Source Code
         run: |
           zip -r sccmod.zip ../sccmod
