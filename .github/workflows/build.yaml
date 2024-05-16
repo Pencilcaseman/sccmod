@@ -84,14 +84,14 @@ jobs:
           toolchain: ${{ matrix.rust }}
       - run: cargo doc
 
-  publish:
+  dry_publish:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         rust:
           - nightly
-    name: publish/${{ matrix.rust }}
+    name: dry_publish/${{ matrix.rust }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -105,6 +105,7 @@ jobs:
       - format
       - tests
       - docs
+      - dry_publish
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

@@ -22,7 +22,7 @@ jobs:
         run: |
           zip -r sccmod.zip ../sccmod
 
-      - uses: "marvinpinto/action-automatic-releases@latest"
+      - uses: Create GitHub Release
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
@@ -31,3 +31,8 @@ jobs:
             README.md
             LICENSE-MIT
             LICENSE-APACHE
+
+      - uses: Publish to Crates.io
+        with:
+          toolchain: nightly
+      - run: cargo publish
