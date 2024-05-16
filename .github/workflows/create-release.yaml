@@ -32,7 +32,8 @@ jobs:
             LICENSE-MIT
             LICENSE-APACHE
 
-      - uses: Publish to Crates.io
+      - name: Publish to Crates.io
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
       - run: cargo publish
