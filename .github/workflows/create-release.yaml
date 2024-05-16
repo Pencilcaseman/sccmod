@@ -38,3 +38,5 @@ jobs:
         with:
           toolchain: nightly
       - run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
