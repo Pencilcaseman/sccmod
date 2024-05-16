@@ -8,6 +8,10 @@ license = "MIT or Apache-2.0"
 repository = "https://github.com/Pencilcaseman/sccmod"
 documentation = "https://docs.rs/sccmod"
 
+description = "A mediocre module manager for handling multiple versions of self-compiled modules"
+keywords = ["package-manager", "version-system", "builder"]
+categories = ["package-manager"]
+
 [dependencies]
 anstyle = "1.0.6"
 clap = { version = "4.5.4", features = ["derive", "cargo"] }
