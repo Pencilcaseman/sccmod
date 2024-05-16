@@ -1,0 +1,33 @@
+name: "Create Release"
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  tagged-release:
+    name: "Tagged Release"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Zip Source Code
+        run: |
+          zip -r sccmod.zip ../sccmod
+
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          files: |
+            sccmod.zip
+            README.md
+            LICENSE-MIT
+            LICENSE-APACHE

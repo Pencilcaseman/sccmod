@@ -87,7 +87,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false,
+      fail-fast: false
       matrix:
         rust:
           - nightly
