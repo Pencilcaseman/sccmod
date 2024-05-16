@@ -2,3 +2,4 @@
 example_out/
 .idea/
 .DS_Store
+*.pyc
