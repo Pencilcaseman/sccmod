@@ -4,7 +4,7 @@ authors = ["Toby Davis \"Pencilcaseman\""]
 version = "0.1.0"
 edition = "2021"
 readme = "README.md"
-license = "MIT or Apache-2.0"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/Pencilcaseman/sccmod"
 documentation = "https://docs.rs/sccmod"
 
