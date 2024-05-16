@@ -2,6 +2,11 @@ use pyo3::prelude::*;
 use std::fs::read_to_string;
 use std::path::Path;
 
+/// Load a Python program from a file path.
+///
+/// # Errors
+/// Errors if the file does not exist, cannot be read or contains invalid
+/// Python code.
 pub fn load_program<'a, P: AsRef<Path> + std::fmt::Debug>(
     py: &'a Python,
     path: &P,
@@ -16,6 +21,10 @@ pub fn load_program<'a, P: AsRef<Path> + std::fmt::Debug>(
         .map_err(|err| format!("Failed to load python program: {err}"))
 }
 
+/// Extract a named attribute of a Python object.
+///
+/// # Errors
+/// Errors if the attribute cannot be found.
 pub fn extract_object<'a>(
     object: &Bound<'a, PyAny>,
     name: &str,

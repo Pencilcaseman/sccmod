@@ -39,12 +39,17 @@ impl Module {
     /// Download the source code for the module, based on its [`Downloader`].
     ///
     /// # Errors
-    /// This will error if the download fails, with an error [`String`] containing either an
-    /// error message or the output of the errored command.
+    /// This will error if the download fails, with an error [`String`] containing
+    /// either an error message or the output of the errored command.
     pub fn download<P: AsRef<Path>>(&self, path: &P) -> Result<(), String> {
         self.downloader.download(path)
     }
 
+    /// Build the source code for this module, based on its [`Builder`].
+    ///
+    /// # Errors
+    /// This will error if the build fails, with an error [`String`] containing
+    /// either an error message or the output of the errored command.
     pub fn build<P0: AsRef<Path> + std::fmt::Debug, P1: AsRef<Path> + std::fmt::Debug>(
         &self,
         source_path: &P0,
@@ -53,6 +58,11 @@ impl Module {
         self.builder.build(source_path, output_path)
     }
 
+    /// Install the source code for this module based on its [`Builder`].
+    ///
+    /// # Errors
+    /// Errors if the installation fails. The [`Result`] output contains a [`String`]
+    /// with either an error message or the output of the errored program.
     pub fn install<P0: AsRef<Path> + std::fmt::Debug, P1: AsRef<Path> + std::fmt::Debug>(
         &self,
         build_path: &P0,
@@ -61,11 +71,16 @@ impl Module {
         self.builder.install(build_path, install_path)
     }
 
+    /// Extract a [`Module`] object from a python object.
+    ///
+    /// # Errors
+    /// This method will return [`Err(msg)`] if the object cannot be parsed
+    /// successfully. `msg` is a string and contains the error message.
     pub fn from_object<P0: AsRef<Path>>(
         object: &Bound<PyAny>,
         path: &P0,
         config: &config::Config,
-    ) -> Result<Module, String> {
+    ) -> Result<Self, String> {
         Python::with_gil(|_| {
             let metadata: HashMap<String, String> = extract_object(object, "metadata")?
                 .call0()
@@ -97,34 +112,29 @@ impl Module {
                 .to_str()
                 .ok_or("Failed to convert filename to string")?
                 .split(PATH_SEP)
-                .map(|x| x.to_string())
+                .map(std::string::ToString::to_string)
                 .collect();
 
             let identifier = metadata
                 .get("identifier")
                 .ok_or("Metadata does not contain 'identifier' tag")?
-                .replace(" ", "_")
-                .replace("\t", "_");
+                .replace([' ', '\t'], "_");
 
             // Download path is ${root}/(${download_path} or ${identifier})
             let download_path = format!(
                 "{}{}{}",
                 config.build_root,
                 PATH_SEP,
-                match metadata.get("download_path") {
-                    Some(path) => path,
-                    None => &identifier,
-                }
+                metadata
+                    .get("download_path")
+                    .map_or(&identifier, |path| path)
             );
 
             let build_path = format!(
                 "{}{}{}",
                 config.build_root,
                 PATH_SEP,
-                match metadata.get("build_path") {
-                    Some(path) => path,
-                    None => &identifier,
-                }
+                metadata.get("build_path").map_or(&identifier, |path| path)
             );
 
             let install_path = format!("{}{}{}", config.install_root, PATH_SEP, identifier);
@@ -161,7 +171,7 @@ pub fn get_modules() -> Result<Vec<Module>, String> {
                     || vec![Err("Failed to extract paths".to_string())],
                     |paths| {
                         // Map path -> Ok(path)
-                        paths.into_iter().map(|p| Ok(p)).collect()
+                        paths.into_iter().map(Ok).collect()
                     },
                 )
             })
@@ -198,25 +208,32 @@ pub fn get_modules() -> Result<Vec<Module>, String> {
     })
 }
 
-pub fn download_module(module: &Module) -> Result<(), String> {
+/// Download a module.
+///
+/// # Errors
+/// Errors if [`Module.download`] fails.
+pub fn download(module: &Module) -> Result<(), String> {
     log::status(&format!("Downloading '{}'", module.identifier));
     module.download(&module.download_path)
 }
 
-pub fn build_module(module: &Module) -> Result<(), String> {
-    log::status(&format!("Downloading '{}'", module.identifier));
-    module.download(&module.download_path)?;
+/// Download and build a module.
+///
+/// # Errors
+/// Errors if [`Module.download`] fails or [`Module.build`] fails.
+pub fn build(module: &Module) -> Result<(), String> {
+    download(module)?;
 
     log::status(&format!("Building '{}'", module.identifier));
     module.build(&module.download_path, &module.install_path)
 }
 
-pub fn install_module(module: &Module) -> Result<(), String> {
-    log::status(&format!("Downloading '{}'", module.identifier));
-    module.download(&module.download_path)?;
-
-    log::status(&format!("Building '{}'", module.identifier));
-    module.build(&module.download_path, &module.build_path)?;
+/// Download, build and install a module.
+///
+/// # Errors
+/// Errors if [`Module.download`], [`Module.build`] or [`Module.install`] fails.
+pub fn install(module: &Module) -> Result<(), String> {
+    build(module)?;
 
     log::status(&format!("Installing '{}'", module.identifier));
     module.install(&module.build_path, &module.install_path)

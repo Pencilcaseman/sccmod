@@ -63,5 +63,5 @@ fn cli(config: &config::Config) -> Result<(), String> {
     };
 
     let cmd = command.generate_command();
-    command.consume(&config, &cmd.get_matches())
+    command.consume(config, &cmd.get_matches())
 }

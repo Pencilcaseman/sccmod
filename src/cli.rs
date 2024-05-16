@@ -166,6 +166,11 @@ impl Command {
         res
     }
 
+    /// Consume a command recursively, running callbacks where suitable.
+    ///
+    /// # Errors
+    ///
+    /// Errors if invalid commands were passed or if the callback fails.
     pub fn consume(
         &self,
         config: &config::Config,

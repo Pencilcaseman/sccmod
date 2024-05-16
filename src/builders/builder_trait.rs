@@ -5,14 +5,42 @@ use std::fmt::Debug;
 use std::path::Path;
 
 pub trait BuilderImpl: Sized {
+    /// Generate a builder object from a python object.
+    ///
+    /// Returns [`Some(obj)`] if the operation was successful, otherwise [`None`]
     fn from_py(object: &Bound<PyAny>) -> Option<Self>;
 
+    /// Perform the build operation specified by the struct.
+    ///
+    /// For example, if this is a [`CMake`] instance, `cmake` is run on the
+    /// `source_path` and the resulting build files are written to `output_path`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err(string)`] if the build script fails to run. This could happen
+    /// for many reasons, including:
+    ///  - Source directory does not exist
+    ///  - Source directory does not contain a valid build script configuration
+    ///  - The code fails to compile
+    ///  - The build files cannot be written to the build directory
     fn build<P0: AsRef<Path> + Debug, P1: AsRef<Path> + Debug>(
         &self,
         source_path: &P0,
         output_path: &P1,
     ) -> Result<(), String>;
 
+    /// Perform the install operation specified by the struct.
+    ///
+    /// For example, if this is a [`CMake`] instance, `cmake --install ...` is run
+    /// on the `build_path` and the install files are installed in `install_path`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err(string)`] if the install script fails to run. This could
+    /// happen for many reasons, including:
+    ///  - Build directory does not exist
+    ///  - Build directory does not contain valid installation information
+    ///  - The install files cannot be written to `install_path`
     fn install<P0: AsRef<Path>, P1: AsRef<Path>>(
         &self,
         build_path: &P0,

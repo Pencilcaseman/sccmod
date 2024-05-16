@@ -67,7 +67,7 @@ impl CMake {
 
     fn compile<P: AsRef<Path> + std::fmt::Debug>(&self, path: &P) -> Result<(), String> {
         let mut cmake = Command::new("cmake");
-        cmake.current_dir(&path);
+        cmake.current_dir(path);
         cmake.arg("--build");
         cmake.arg(".");
         cmake.arg(format!("--config {:?}", self.build_type));

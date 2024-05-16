@@ -1,16 +1,27 @@
 use crate::{config, log, module::get_modules};
-use colored::*;
+use colored::Colorize;
 
+/// A callback function to list all available modules
+///
+/// # Errors
+///
+/// This function will error if an invalid modulefile is found.
 pub fn list_callback(_config: &config::Config) -> Result<(), String> {
     println!("{}", "Available Modules:".bold().purple());
 
     for p in &get_modules()? {
-        println!("{} {}", " >", p.identifier.bold().cyan());
+        println!(" > {}", p.identifier.bold().cyan());
     }
 
     Ok(())
 }
 
+/// A callback function to download a module from its name.
+///
+/// # Errors
+///
+/// Will error if a single module cannot be resolved from the specified name,
+/// or if the call to [`Module.download`] fails.
 pub fn download_module(name: &str, _config: &config::Config) -> Result<(), String> {
     for module in &get_modules()? {
         if name == module.identifier {
@@ -22,6 +33,12 @@ pub fn download_module(name: &str, _config: &config::Config) -> Result<(), Strin
     Ok(())
 }
 
+/// A callback function to build a module based on its name.
+///
+/// # Errors
+///
+/// Errors if a single module cannot be resolved from the specified name,
+/// or if the call to [`Module.build`] fails.
 pub fn build_module(name: &str, _config: &config::Config) -> Result<(), String> {
     for module in &get_modules()? {
         if name == module.identifier {
@@ -36,6 +53,12 @@ pub fn build_module(name: &str, _config: &config::Config) -> Result<(), String> 
     Ok(())
 }
 
+/// A callback function to install a module from its name.
+///
+/// # Errors
+///
+/// Returns [`Err(string)`] if a single module cannot be resolved from the
+/// specified name, or if the call to [`Module.install`] fails.
 pub fn install_module(name: &str, _config: &config::Config) -> Result<(), String> {
     for module in &get_modules()? {
         if name == module.identifier {

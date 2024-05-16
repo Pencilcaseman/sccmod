@@ -39,6 +39,13 @@ pub fn status(message: &str) {
     );
 }
 
+/// Print `message` to the console, marked as `information`, but
+/// append a carriage return so the cursor will print from the
+/// start of the line on the next output.
+///
+/// # Panics
+///
+/// Panics if the call to [`std::io::stdout().flush()`] fails.
 pub fn info_carriage(message: &str) {
     // Clear the line
     print!("\x1b[K");
@@ -52,6 +59,13 @@ pub fn info_carriage(message: &str) {
     std::io::stdout().flush().unwrap();
 }
 
+/// Print `message` to the console, marked as `warn`, but
+/// append a carriage return so the cursor will print from the
+/// start of the line on the next output.
+///
+/// # Panics
+///
+/// Panics if the call to [`std::io::stdout().flush()`] fails.
 pub fn warn_carriage(message: &str) {
     // Clear the line
     print!("\x1b[K");
