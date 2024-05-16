@@ -18,6 +18,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Publish to Crates.io
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+      - run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
       - name: Zip Source Code
         run: |
           zip -r sccmod.zip ../sccmod
@@ -32,11 +40,3 @@ jobs:
             README.md
             LICENSE-MIT
             LICENSE-APACHE
-
-      - name: Publish to Crates.io
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
-      - run: cargo publish
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
