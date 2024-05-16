@@ -1,7 +1,12 @@
 [package]
 name = "sccmod"
+authors = ["Toby Davis \"Pencilcaseman\""]
 version = "0.1.0"
 edition = "2021"
+readme = "README.md"
+license = "MIT or Apache-2.0"
+repository = "https://github.com/Pencilcaseman/sccmod"
+documentation = "https://docs.rs/sccmod"
 
 [dependencies]
 anstyle = "1.0.6"
@@ -15,4 +20,3 @@ toml = "0.8.12"
 pedantic = "deny"
 nursery = "deny"
 #missing_docs = "deny"
-

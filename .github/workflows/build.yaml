@@ -84,6 +84,21 @@ jobs:
           toolchain: ${{ matrix.rust }}
       - run: cargo doc
 
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false,
+      matrix:
+        rust:
+          - nightly
+    name: publish/${{ matrix.rust }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - run: cargo publish --dry-run
+
   conclusion:
     needs:
       - clippy
