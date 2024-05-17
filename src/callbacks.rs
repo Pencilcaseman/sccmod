@@ -27,7 +27,7 @@ pub fn resolver_boilerplate(
                 clippy::cast_sign_loss,
                 clippy::cast_precision_loss
             )]
-            let max_digits = (m.len() as f64).log10() as usize + 1;
+            let max_digits = (m.len() as f64).log10() as usize;
 
             for (index, item) in m.iter().enumerate() {
                 // Always valid, as `item` >= 0, so `log(item + 1)` >= 0
@@ -36,7 +36,7 @@ pub fn resolver_boilerplate(
                     clippy::cast_sign_loss,
                     clippy::cast_precision_loss
                 )]
-                let digits = ((index + 1) as f64).log10() as usize;
+                let digits = (index as f64 + 0.05).log10() as usize;
 
                 let mut index_str = String::from(" ").repeat(max_digits - digits);
                 index_str.push_str(&format!("{index}"));

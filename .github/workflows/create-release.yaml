@@ -18,11 +18,13 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Publish to Crates.io
+      - name: Download Rust Nightly
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
-      - run: cargo publish
+
+      - name: Publish to Crates.io
+        run: cargo publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
