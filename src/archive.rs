@@ -1,0 +1,36 @@
+use std::{path::Path, process::Command};
+
+pub fn extract<P: AsRef<Path>>(path: &P, name: &str, archive_type: &str) -> Result<(), String> {
+    let mut command = match archive_type.to_lowercase().as_ref() {
+        "tar" | "tar.gz" | "targz" | "tgz" => {
+            let mut cmd = Command::new("tar");
+            cmd.arg("-xvf");
+            cmd.arg(name);
+            cmd
+        }
+        invalid => return Err(format!("Invalid archive type '{invalid}'")),
+    };
+
+    command.current_dir(path);
+
+    command.stdout(std::process::Stdio::piped());
+    command.stderr(std::process::Stdio::piped());
+
+    let spawn = command.spawn().map_err(|e| e.to_string())?;
+    let (result, stdout, stderr) = crate::cli::child_logger(spawn);
+
+    if result.is_err() {
+        return Err("Failed to run tar command".to_string());
+    }
+    let result = result.unwrap();
+
+    if !result.success() {
+        return Err(format!(
+            "Failed to extract archive: \n{}\n{}",
+            stdout.join("\n"),
+            stderr.join("\n")
+        ));
+    }
+
+    Ok(())
+}

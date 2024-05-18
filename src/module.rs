@@ -94,8 +94,7 @@ impl Module {
                 &extract_object(object, "download")?
                     .call0()
                     .map_err(|err| format!("Failed to call `download` in module class: {err}"))?,
-            )
-            .ok_or_else(|| "Could not extract downloader from module class".to_string())?;
+            )?;
 
             // todo: build requirements
 

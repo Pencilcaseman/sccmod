@@ -7,6 +7,7 @@ pub mod builders {
     pub mod cmake;
 }
 
+pub mod archive;
 pub mod callbacks;
 pub mod cli;
 pub mod config;
