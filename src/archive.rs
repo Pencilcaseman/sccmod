@@ -1,11 +1,17 @@
 use std::{path::Path, process::Command};
 
+/// Extract an archive file
+///
+/// # Errors
+///
+/// Errors if the directory cannot be created or the file extraction command fails
 pub fn extract<P: AsRef<Path>>(path: &P, name: &str, archive_type: &str) -> Result<(), String> {
     let mut command = match archive_type.to_lowercase().as_ref() {
         "tar" | "tar.gz" | "targz" | "tgz" => {
             let mut cmd = Command::new("tar");
-            cmd.arg("-xvf");
-            cmd.arg(name);
+            cmd.arg("-xvf"); // Extract verbose file
+            cmd.arg(name); // File name
+            cmd.arg("--strip-components=1"); // Curl into this directory
             cmd
         }
         invalid => return Err(format!("Invalid archive type '{invalid}'")),
