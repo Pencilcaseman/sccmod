@@ -1,6 +1,8 @@
-use crate::{archive, log};
+use crate::archive;
 use pyo3::prelude::*;
 use std::{fs, path::Path, process::Command};
+
+const FILE_NAME: &str = "curl_download_result";
 
 pub trait DownloaderImpl: Sized {
     /// Convert from a Python `Downloader` instance to a Rust [`Downloader`] instance.
@@ -213,9 +215,7 @@ impl DownloaderImpl for Curl {
         // Todo: Check if the hashes match. If they do, there is no need to re-download
 
         // Ensure the directory exists
-        fs::create_dir_all(&path).map_err(|e| e.to_string())?;
-
-        const FILE_NAME: &str = "curl_download_result";
+        fs::create_dir_all(path).map_err(|e| e.to_string())?;
 
         let mut command = Command::new("curl");
         command.current_dir(path.as_ref());
@@ -244,7 +244,7 @@ impl DownloaderImpl for Curl {
 
         // Extract the archive if necessary
         if let Some(archive) = &self.archive {
-            archive::extract(path, FILE_NAME, &archive)?;
+            archive::extract(path, FILE_NAME, archive)?;
         }
 
         Ok(())

@@ -25,7 +25,13 @@ fn cli(config: &config::Config) -> Result<(), String> {
             },
             cli::Command {
                 name: "download",
-                subcommands: Vec::new(),
+                subcommands: vec![cli::Command {
+                    name: "all",
+                    subcommands: Vec::new(),
+                    arguments: Vec::new(),
+                    help: "Download all available modules",
+                    callback: Some(callbacks::download_all),
+                }],
                 arguments: vec![cli::Arg {
                     name: "module",
                     help: "Download the specified module",
@@ -37,7 +43,13 @@ fn cli(config: &config::Config) -> Result<(), String> {
             },
             cli::Command {
                 name: "build",
-                subcommands: Vec::new(),
+                subcommands: vec![cli::Command {
+                    name: "all",
+                    subcommands: Vec::new(),
+                    arguments: Vec::new(),
+                    help: "Build all available modules",
+                    callback: Some(callbacks::build_all),
+                }],
                 arguments: vec![cli::Arg {
                     name: "module",
                     help: "Build the specified module",
@@ -49,7 +61,13 @@ fn cli(config: &config::Config) -> Result<(), String> {
             },
             cli::Command {
                 name: "install",
-                subcommands: Vec::new(),
+                subcommands: vec![cli::Command {
+                    name: "all",
+                    subcommands: Vec::new(),
+                    arguments: Vec::new(),
+                    help: "Install all available modules",
+                    callback: Some(callbacks::install_all),
+                }],
                 arguments: vec![cli::Arg {
                     name: "module",
                     help: "Install the specified module",

@@ -1,4 +1,4 @@
-use crate::builders::cmake::CMake;
+use crate::builders::{cmake::CMake, make::Make};
 use pyo3::prelude::{PyAnyMethods, PyTypeMethods};
 use pyo3::{Bound, PyAny};
 use std::fmt::Debug;
@@ -7,8 +7,12 @@ use std::path::Path;
 pub trait BuilderImpl: Sized {
     /// Generate a builder object from a python object.
     ///
-    /// Returns [`Some(obj)`] if the operation was successful, otherwise [`None`]
-    fn from_py(object: &Bound<PyAny>) -> Option<Self>;
+    /// Returns [`Ok(obj)`] if the operation was successful, otherwise [`Err(string)`]
+    ///
+    /// # Errors
+    /// Errors if any attribute cannot be extracted or converted, or if the provided
+    /// object is invalid.
+    fn from_py(object: &Bound<PyAny>) -> Result<Self, String>;
 
     /// Perform the build operation specified by the struct.
     ///
@@ -23,10 +27,11 @@ pub trait BuilderImpl: Sized {
     ///  - Source directory does not contain a valid build script configuration
     ///  - The code fails to compile
     ///  - The build files cannot be written to the build directory
-    fn build<P0: AsRef<Path> + Debug, P1: AsRef<Path> + Debug>(
+    fn build<P0: AsRef<Path> + Debug, P1: AsRef<Path> + Debug, P2: AsRef<Path>>(
         &self,
         source_path: &P0,
-        output_path: &P1,
+        build_path: &P1,
+        install_path: &P2, // Necessary for make
     ) -> Result<(), String>;
 
     /// Perform the install operation specified by the struct.
@@ -51,27 +56,29 @@ pub trait BuilderImpl: Sized {
 #[derive(Debug)]
 pub enum Builder {
     CMake(CMake),
+    Make(Make),
 }
 
 impl BuilderImpl for Builder {
-    fn from_py(object: &Bound<PyAny>) -> Option<Self> {
+    fn from_py(object: &Bound<PyAny>) -> Result<Self, String> {
         let name = object.get_type().name().unwrap().to_string();
 
         match name.as_str() {
-            "CMake" => Some(Self::CMake(CMake::from_py(object)?)),
-            _ => None,
+            "CMake" => Ok(Self::CMake(CMake::from_py(object)?)),
+            "Make" => Ok(Self::Make(Make::from_py(object)?)),
+            _ => Err("Invalid builder type".to_string()),
         }
     }
 
-    fn build<P0: AsRef<Path> + Debug, P1: AsRef<Path> + Debug>(
+    fn build<P0: AsRef<Path> + Debug, P1: AsRef<Path> + Debug, P2: AsRef<Path>>(
         &self,
         source_path: &P0,
-        output_path: &P1,
+        build_path: &P1,
+        install_path: &P2,
     ) -> Result<(), String> {
-        // todo!()
-
         match self {
-            Self::CMake(cmake) => cmake.build(source_path, output_path),
+            Self::CMake(cmake) => cmake.build(source_path, build_path, install_path),
+            Self::Make(make) => make.build(source_path, build_path, install_path),
         }
     }
 
@@ -80,10 +87,9 @@ impl BuilderImpl for Builder {
         build_path: &P0,
         install_path: &P1,
     ) -> Result<(), String> {
-        // todo!()
-
         match self {
             Self::CMake(cmake) => cmake.install(build_path, install_path),
+            Self::Make(make) => make.install(build_path, install_path),
         }
     }
 }

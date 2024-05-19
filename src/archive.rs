@@ -25,10 +25,15 @@ pub fn extract<P: AsRef<Path>>(path: &P, name: &str, archive_type: &str) -> Resu
     let spawn = command.spawn().map_err(|e| e.to_string())?;
     let (result, stdout, stderr) = crate::cli::child_logger(spawn);
 
-    if result.is_err() {
-        return Err("Failed to run tar command".to_string());
-    }
-    let result = result.unwrap();
+    // if result.is_err() {
+    //     return Err("Failed to run tar command".to_string());
+    // }
+    // let result = result.unwrap();
+
+    let result = match result {
+        Ok(x) => x,
+        Err(x) => return Err(x.to_string()),
+    };
 
     if !result.success() {
         return Err(format!(

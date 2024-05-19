@@ -50,12 +50,17 @@ impl Module {
     /// # Errors
     /// This will error if the build fails, with an error [`String`] containing
     /// either an error message or the output of the errored command.
-    pub fn build<P0: AsRef<Path> + std::fmt::Debug, P1: AsRef<Path> + std::fmt::Debug>(
+    pub fn build<
+        P0: AsRef<Path> + std::fmt::Debug,
+        P1: AsRef<Path> + std::fmt::Debug,
+        P2: AsRef<Path>,
+    >(
         &self,
         source_path: &P0,
-        output_path: &P1,
+        build_path: &P1,
+        install_path: &P2,
     ) -> Result<(), String> {
-        self.builder.build(source_path, output_path)
+        self.builder.build(source_path, build_path, install_path)
     }
 
     /// Install the source code for this module based on its [`Builder`].
@@ -102,8 +107,7 @@ impl Module {
                 &extract_object(object, "build")?
                     .call0()
                     .map_err(|err| format!("Failed to call `build` in module class: {err}"))?,
-            )
-            .ok_or_else(|| "Could not extract builder from module class".to_string())?;
+            )?;
 
             // Extract modulefile from the path
             let modulefile: Vec<String> = path
@@ -224,7 +228,11 @@ pub fn build(module: &Module) -> Result<(), String> {
     download(module)?;
 
     log::status(&format!("Building '{}'", module.identifier));
-    module.build(&module.download_path, &module.build_path)
+    module.build(
+        &module.download_path,
+        &module.build_path,
+        &module.install_path,
+    )
 }
 
 /// Download, build and install a module.

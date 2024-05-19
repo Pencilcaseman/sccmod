@@ -5,6 +5,7 @@
 pub mod builders {
     pub mod builder_trait;
     pub mod cmake;
+    pub mod make;
 }
 
 pub mod archive;

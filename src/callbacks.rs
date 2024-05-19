@@ -1,6 +1,6 @@
 use crate::{
-    config, log, module,
-    module::{get_modules, Module},
+    config, log,
+    module::{self, get_modules, Module},
     module_resolver,
 };
 use colored::Colorize;
@@ -111,6 +111,19 @@ pub fn download_module(partials: &[&str], _config: &config::Config) -> Result<()
     resolver_boilerplate(partials, module::download)
 }
 
+/// A callback function to download all available modules
+///
+/// # Errors
+///
+/// Errors if the modules cannot be listed or if any module fails to download
+pub fn download_all(_config: &config::Config) -> Result<(), String> {
+    for m in &get_modules()? {
+        module::download(m)?;
+    }
+
+    Ok(())
+}
+
 /// A callback function to build a module based on its name.
 ///
 /// # Errors
@@ -121,6 +134,19 @@ pub fn build_module(partials: &[&str], _config: &config::Config) -> Result<(), S
     resolver_boilerplate(partials, module::build)
 }
 
+/// A callback function to build all available modules
+///
+/// # Errors
+///
+/// Errors if the modules cannot be listed or if any module fails to build
+pub fn build_all(_config: &config::Config) -> Result<(), String> {
+    for m in &get_modules()? {
+        module::build(m)?;
+    }
+
+    Ok(())
+}
+
 /// A callback function to install a module from its name.
 ///
 /// # Errors
@@ -129,4 +155,17 @@ pub fn build_module(partials: &[&str], _config: &config::Config) -> Result<(), S
 /// specified name, or if the call to [`Module.install`] fails.
 pub fn install_module(partials: &[&str], _config: &config::Config) -> Result<(), String> {
     resolver_boilerplate(partials, module::install)
+}
+
+/// A callback function to install all available modules
+///
+/// # Errors
+///
+/// Errors if the modules cannot be listed or if any module fails to install
+pub fn install_all(_config: &config::Config) -> Result<(), String> {
+    for m in &get_modules()? {
+        module::install(m)?;
+    }
+
+    Ok(())
 }

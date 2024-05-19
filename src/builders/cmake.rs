@@ -96,12 +96,12 @@ impl CMake {
 }
 
 impl BuilderImpl for CMake {
-    fn from_py(object: &Bound<PyAny>) -> Option<Self> {
+    fn from_py(object: &Bound<PyAny>) -> Result<Self, String> {
         let build_type = match object
             .getattr("build_type")
-            .ok()?
+            .map_err(|_| "Failed to read attribute 'build_type' of Builder object")?
             .extract::<String>()
-            .ok()?
+            .map_err(|_| "Failed to convert attribute 'build_type' to Rust String")?
             .to_lowercase()
             .as_str()
         {
@@ -112,25 +112,37 @@ impl BuilderImpl for CMake {
             other => log::error(&format!("Unknown CMake build type {other}")),
         };
 
-        let jobs: usize = object.getattr("jobs").ok()?.extract().ok()?;
+        let jobs: usize = object
+            .getattr("jobs")
+            .map_err(|_| "Failed to read attribute 'jobs' of Builder object")?
+            .extract()
+            .map_err(|_| "Failed to convert attribute 'jobs' to Rust usize")?;
 
-        let configure_flags: Option<Vec<String>> =
-            object.getattr("configure_flags").ok()?.extract().ok()?;
+        let configure_flags: Option<Vec<String>> = object
+            .getattr("configure_flags")
+            .map_err(|_| "Failed to read attribute 'configure_flags' of Builder object")?
+            .extract()
+            .map_err(|_| "Failed to convert attribute 'configure_flags' to Rust Vec<String>")?;
 
-        Some(Self {
+        Ok(Self {
             build_type,
             jobs,
             configure_flags,
         })
     }
 
-    fn build<P0: AsRef<Path> + std::fmt::Debug, P1: AsRef<Path> + std::fmt::Debug>(
+    fn build<
+        P0: AsRef<Path> + std::fmt::Debug,
+        P1: AsRef<Path> + std::fmt::Debug,
+        P2: AsRef<Path>,
+    >(
         &self,
         source_path: &P0,
-        output_path: &P1,
+        build_path: &P1,
+        _: &P2,
     ) -> Result<(), String> {
-        self.configure(source_path, output_path)?;
-        self.compile(output_path)?;
+        self.configure(source_path, build_path)?;
+        self.compile(build_path)?;
         Ok(())
     }
 
