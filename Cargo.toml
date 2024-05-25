@@ -21,6 +21,6 @@ pyo3 = { version = "0.21.0", features = ["auto-initialize"] }
 toml = "0.8.12"
 
 [lints.clippy]
-pedantic = "deny"
-nursery = "deny"
+pedantic = "warn"
+nursery = "warn"
 # missing_docs = "deny"

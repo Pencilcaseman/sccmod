@@ -35,6 +35,7 @@ pub struct GitClone {
     branch: Option<String>,
     commit: Option<String>,
     submodules: bool,
+    shallow: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +52,8 @@ impl GitClone {
             url: url.to_string(),
             branch: None,
             commit: None,
-            submodules: false,
+            submodules: true,
+            shallow: false,
         }
     }
 }
@@ -85,11 +87,19 @@ impl DownloaderImpl for GitClone {
             Err(_) => false,
         };
 
+        let shallow: bool = match object.getattr("shallow") {
+            Ok(x) => x
+                .extract()
+                .map_err(|_| "Failed to convert attribute 'shallow' to Rust bool")?,
+            Err(_) => false,
+        };
+
         Ok(Self {
             url,
             branch,
             commit,
             submodules,
+            shallow,
         })
     }
 
@@ -103,6 +113,7 @@ impl DownloaderImpl for GitClone {
         } else {
             let mut command = Command::new("git");
             command.arg("clone");
+            command.arg("--filter=blob:none"); // reduce clone size
             command.arg(&self.url);
 
             if let Some(branch) = &self.branch {
@@ -114,7 +125,11 @@ impl DownloaderImpl for GitClone {
                 command.arg("--recursive");
             }
 
-            // Clone into `path`
+            if self.shallow {
+                command.arg("--depth=1");
+            }
+
+            // Clone into `pathAny
             command.arg(path.as_ref());
 
             command.stdout(std::process::Stdio::piped());

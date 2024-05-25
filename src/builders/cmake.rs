@@ -1,8 +1,7 @@
+use crate::{builders::builder_trait::BuilderImpl, log, shell::Shell};
 use pyo3::prelude::PyAnyMethods;
 use pyo3::{Bound, PyAny};
-use std::{fs, path, path::Path, process::Command};
-
-use crate::{builders::builder_trait::BuilderImpl, cli::child_logger, log};
+use std::{fs, path, path::Path};
 
 #[derive(Debug)]
 pub enum CMakeBuildType {
@@ -24,6 +23,7 @@ impl CMake {
         &self,
         source_path: &P0,
         output_path: &P1,
+        dependencies: &[String],
     ) -> Result<(), String> {
         let source_path = path::absolute(source_path).map_err(|err| err.to_string())?;
         let output_path = path::absolute(output_path).map_err(|err| err.to_string())?;
@@ -31,23 +31,26 @@ impl CMake {
         // Attempt to create the output directory if necessary
         fs::create_dir_all(&output_path).map_err(|e| e.to_string())?;
 
-        let mut cmake = Command::new("cmake");
-        cmake.current_dir(&output_path);
-        cmake.arg(&source_path);
+        let mut shell = Shell::default();
+        shell.set_current_dir(output_path.to_str().unwrap());
+
+        for dep in dependencies {
+            shell.add_command(&format!("module load {dep}"));
+        }
+
+        let mut cmake_cmd = format!("cmake {source_path:?}");
 
         if let Some(flags) = &self.configure_flags {
             for flag in flags {
-                cmake.arg(flag);
+                // cmake.arg(flag);
+                cmake_cmd.push_str(&format!(" {flag}"));
             }
         }
 
-        // After other flags, so used preferentially
-        cmake.arg(format!("-DCMAKE_BUILD_TYPE={:?}", self.build_type));
-        cmake.stdout(std::process::Stdio::piped());
-        cmake.stderr(std::process::Stdio::piped());
+        cmake_cmd.push_str(&format!("-DCMAKE_BUILD_TYPE={:?}", self.build_type));
+        shell.add_command(&cmake_cmd);
 
-        let spawn = cmake.spawn().map_err(|e| e.to_string())?;
-        let (result, stdout, stderr) = child_logger(spawn);
+        let (result, stdout, stderr) = shell.exec();
 
         if result.is_err() {
             return Err("Failed to run CMake command".to_string());
@@ -56,7 +59,7 @@ impl CMake {
 
         if !result.success() {
             return Err(format!(
-                "Failed to execute {cmake:?}. Output:\n{}\n{}",
+                "Failed to execute command. Output:\n{}\n{}",
                 stdout.join("\n"),
                 stderr.join("\n")
             ));
@@ -65,27 +68,41 @@ impl CMake {
         Ok(())
     }
 
-    fn compile<P: AsRef<Path> + std::fmt::Debug>(&self, path: &P) -> Result<(), String> {
-        let mut cmake = Command::new("cmake");
-        cmake.current_dir(path);
-        cmake.arg("--build");
-        cmake.arg(".");
-        cmake.arg(format!("--config {:?}", self.build_type));
-        cmake.arg(format!("--parallel {:?}", self.jobs));
-        cmake.stdout(std::process::Stdio::piped());
-        cmake.stderr(std::process::Stdio::piped());
+    fn compile<P: AsRef<Path> + std::fmt::Debug>(
+        &self,
+        path: &P,
+        dependencies: &[String],
+    ) -> Result<(), String> {
+        // let mut cmake = Command::new("cmake");
+        // cmake.current_dir(path);
+        // cmake.arg("--build");
+        // cmake.arg(".");
+        // cmake.arg(format!("--config {:?}", self.build_type));
+        // cmake.arg(format!("--parallel {:?}", self.jobs));
+        // cmake.stdout(std::process::Stdio::piped());
+        // cmake.stderr(std::process::Stdio::piped());
 
-        let spawn = cmake.spawn().map_err(|e| e.to_string())?;
-        let (result, stdout, stderr) = child_logger(spawn);
-
-        if result.is_err() {
-            return Err("Failed to run CMake command".to_string());
+        let mut shell = Shell::default();
+        shell.set_current_dir(path.as_ref().to_str().unwrap());
+        for dep in dependencies {
+            shell.add_command(&format!("module load {dep}"));
         }
-        let result = result.unwrap();
+
+        shell.add_command(&format!(
+            "cmake --build . --config {:?} --parallel {:?}",
+            self.build_type, self.jobs
+        ));
+
+        // let spawn = cmake.spawn().map_err(|e| e.to_string())?;
+        // let (result, stdout, stderr) = child_logger(spawn);
+
+        let (result, stdout, stderr) = shell.exec();
+
+        let result = result.map_err(|_| "Failed to run CMake command")?;
 
         if !result.success() {
             return Err(format!(
-                "Failed to execute {cmake:?}. Output:\n{}\n{}",
+                "Failed to execute command. Output:\n{}\n{}",
                 stdout.join("\n"),
                 stderr.join("\n")
             ));
@@ -140,9 +157,10 @@ impl BuilderImpl for CMake {
         source_path: &P0,
         build_path: &P1,
         _: &P2,
+        dependencies: &[String],
     ) -> Result<(), String> {
-        self.configure(source_path, build_path)?;
-        self.compile(build_path)?;
+        self.configure(source_path, build_path, dependencies)?;
+        self.compile(build_path, dependencies)?;
         Ok(())
     }
 
@@ -150,6 +168,7 @@ impl BuilderImpl for CMake {
         &self,
         build_path: &P0,
         install_path: &P1,
+        dependencies: &[String],
     ) -> Result<(), String> {
         let build_path = path::absolute(build_path).map_err(|err| err.to_string())?;
         let install_path = path::absolute(install_path).map_err(|err| err.to_string())?;
@@ -160,32 +179,40 @@ impl BuilderImpl for CMake {
             return Err(format!("Build directory {build_path:?} does not exist"));
         }
 
-        let mut cmake = Command::new("cmake");
-        cmake.current_dir(&build_path);
-        cmake.arg("--install");
-        cmake.arg(".");
-        cmake.arg(format!("--config {:?}", self.build_type));
-        cmake.arg(format!(
-            "--prefix {}",
-            install_path
-                .to_str()
-                .ok_or("Failed to convert path to string")?
-        ));
+        // let mut cmake = Command::new("cmake");
+        // cmake.current_dir(&build_path);
+        // cmake.arg("--install");
+        // cmake.arg(".");
+        // cmake.arg(format!("--config {:?}", self.build_type));
+        // cmake.arg(format!(
+        //     "--prefix {}",
+        //     install_path
+        //         .to_str()
+        //         .ok_or("Failed to convert path to string")?
+        // ));
 
-        cmake.stdout(std::process::Stdio::piped());
-        cmake.stderr(std::process::Stdio::piped());
-        let spawn = cmake.spawn().map_err(|e| e.to_string())?;
+        let mut shell = Shell::default();
+        shell.set_current_dir(build_path.to_str().unwrap());
 
-        let (result, stdout, stderr) = child_logger(spawn);
-
-        if result.is_err() {
-            return Err("Failed to run CMake command".to_string());
+        for dep in dependencies {
+            shell.add_command(&format!("module load {dep}"));
         }
-        let result = result.unwrap();
+
+        shell.add_command(&format!("cmake --install . --preifx {install_path:?}"));
+
+        // cmake.stdout(std::process::Stdio::piped());
+        // cmake.stderr(std::process::Stdio::piped());
+        // let spawn = cmake.spawn().map_err(|e| e.to_string())?;
+
+        // let (result, stdout, stderr) = child_logger(spawn);
+
+        let (result, stdout, stderr) = shell.exec();
+
+        let result = result.map_err(|_| "Failed to run CMake command")?;
 
         if !result.success() {
             return Err(format!(
-                "Failed to execute {cmake:?}. Output:\n{}\n{}",
+                "Failed to execute command. Output:\n{}\n{}",
                 stdout.join("\n"),
                 stderr.join("\n")
             ));

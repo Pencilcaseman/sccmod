@@ -32,6 +32,7 @@ pub trait BuilderImpl: Sized {
         source_path: &P0,
         build_path: &P1,
         install_path: &P2, // Necessary for make
+        dependencies: &[String],
     ) -> Result<(), String>;
 
     /// Perform the install operation specified by the struct.
@@ -50,6 +51,7 @@ pub trait BuilderImpl: Sized {
         &self,
         build_path: &P0,
         install_path: &P1,
+        dependencies: &[String],
     ) -> Result<(), String>;
 }
 
@@ -75,10 +77,11 @@ impl BuilderImpl for Builder {
         source_path: &P0,
         build_path: &P1,
         install_path: &P2,
+        dependencies: &[String],
     ) -> Result<(), String> {
         match self {
-            Self::CMake(cmake) => cmake.build(source_path, build_path, install_path),
-            Self::Make(make) => make.build(source_path, build_path, install_path),
+            Self::CMake(cmake) => cmake.build(source_path, build_path, install_path, dependencies),
+            Self::Make(make) => make.build(source_path, build_path, install_path, dependencies),
         }
     }
 
@@ -86,10 +89,11 @@ impl BuilderImpl for Builder {
         &self,
         build_path: &P0,
         install_path: &P1,
+        dependencies: &[String],
     ) -> Result<(), String> {
         match self {
-            Self::CMake(cmake) => cmake.install(build_path, install_path),
-            Self::Make(make) => make.install(build_path, install_path),
+            Self::CMake(cmake) => cmake.install(build_path, install_path, dependencies),
+            Self::Make(make) => make.install(build_path, install_path, dependencies),
         }
     }
 }

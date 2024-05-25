@@ -4,6 +4,7 @@ use crate::{
     downloaders::{Downloader, DownloaderImpl},
     file_manager::{recursive_list_dir, PATH_SEP},
     log,
+    shell::Shell,
 };
 
 use crate::python_interop::{extract_object, load_program};
@@ -29,7 +30,12 @@ pub struct Module {
     /// Path to install the source coe
     pub install_path: String,
 
-    pub dependencies: Vec<Box<Module>>,
+    /// A list of dependencies which can be `module load ...`'ed
+    pub dependencies: Vec<String>,
+
+    /// A list of commands to run before building
+    pub pre_build: Option<Vec<String>>,
+
     pub downloader: Downloader,
     pub builder: Builder,
     pub metadata: HashMap<String, String>,
@@ -60,7 +66,32 @@ impl Module {
         build_path: &P1,
         install_path: &P2,
     ) -> Result<(), String> {
-        self.builder.build(source_path, build_path, install_path)
+        if let Some(commands) = &self.pre_build {
+            log::status(&"Running pre-build commands");
+
+            let mut shell = Shell::default();
+            shell.set_current_dir(source_path.as_ref().to_str().unwrap());
+            for cmd in commands {
+                shell.add_command(&cmd);
+            }
+
+            let (result, stdout, stderr) = shell.exec();
+
+            let result = result.map_err(|_| "Failed to run CMake command")?;
+
+            if !result.success() {
+                return Err(format!(
+                    "Failed to execute command. Output:\n{}\n{}",
+                    stdout.join("\n"),
+                    stderr.join("\n")
+                ));
+            }
+
+            log::status(&"Building...");
+        }
+
+        self.builder
+            .build(source_path, build_path, install_path, &self.dependencies)
     }
 
     /// Install the source code for this module based on its [`Builder`].
@@ -73,7 +104,8 @@ impl Module {
         build_path: &P0,
         install_path: &P1,
     ) -> Result<(), String> {
-        self.builder.install(build_path, install_path)
+        self.builder
+            .install(build_path, install_path, &self.dependencies)
     }
 
     /// Extract a [`Module`] object from a python object.
@@ -101,13 +133,39 @@ impl Module {
                     .map_err(|err| format!("Failed to call `download` in module class: {err}"))?,
             )?;
 
-            // todo: build requirements
+            let dependencies: Vec<String> = extract_object(object, "build_requirements")?
+                .call0()
+                .map_err(|err| format!("Failed to call `build_requirements`: {err}"))?
+                .extract()
+                .map_err(|err| {
+                    format!("Failed to convert output of `build_requirements()` to Rust Vec: {err}")
+                })?;
 
             let builder = Builder::from_py(
                 &extract_object(object, "build")?
                     .call0()
                     .map_err(|err| format!("Failed to call `build` in module class: {err}"))?,
             )?;
+
+            // let pre_build = Builder::from_py(
+            //     &extract_object(object, "pre_build")?
+            //         .call0()
+            //         .map_err(|err| format!("Failed to call `build` in module class: {err}"))?,
+            // )?;
+
+            let pre_build: Option<Vec<String>> = match extract_object(object, "pre_build") {
+                Ok(obj) => Some(
+                    obj.call0()
+                        .map_err(|err| {
+                            format!("Failed to call 'pre_build()` in module class: {err}")
+                        })?
+                        .extract()
+                        .map_err(|err| {
+                            format!("Failed to convert object to Rust Vec<String>: {err}")
+                        })?,
+                ),
+                Err(_) => None,
+            };
 
             // Extract modulefile from the path
             let modulefile: Vec<String> = path
@@ -148,7 +206,8 @@ impl Module {
                 download_path,
                 build_path,
                 install_path,
-                dependencies: vec![],
+                dependencies,
+                pre_build,
                 downloader,
                 builder,
                 metadata,

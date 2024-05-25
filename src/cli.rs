@@ -25,8 +25,8 @@ pub fn child_logger(
         return (Err(ErrorKind::BrokenPipe.into()), Vec::new(), Vec::new());
     }
 
-    let stdout = stdout;
-    let stderr = stderr;
+    // let stdout = stdout;
+    // let stderr = stderr;
 
     if stdout.is_none() || stderr.is_none() {
         return (

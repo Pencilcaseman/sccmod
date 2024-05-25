@@ -6,6 +6,7 @@ pub struct Config {
     pub module_paths: Vec<String>,
     pub build_root: String,
     pub install_root: String,
+    pub shell: String,
 }
 
 /// Read the sccmod configuration toml file and return the result.
@@ -56,9 +57,15 @@ pub fn read() -> Result<Config, String> {
         .ok_or_else(|| "`install_root` must be a string".to_string())?
         .to_string();
 
+    let shell: String = table["shell"]
+        .as_str()
+        .ok_or_else(|| "`install_root` must be a string".to_string())?
+        .to_string();
+
     Ok(Config {
         module_paths,
         build_root,
         install_root,
+        shell,
     })
 }
