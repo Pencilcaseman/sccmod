@@ -45,6 +45,7 @@ impl Make {
         // ));
 
         let mut shell = Shell::default();
+        shell.set_current_dir(source_path.to_str().unwrap());
 
         for dep in dependencies {
             shell.add_command(&format!("module load {dep}"));
