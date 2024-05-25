@@ -179,13 +179,14 @@ impl BuilderImpl for Make {
         Ok(())
     }
 
-    fn install<P0: AsRef<Path>, P1: AsRef<Path>>(
+    fn install<P0: AsRef<Path>, P1: AsRef<Path>, P2: AsRef<Path>>(
         &self,
-        build_path: &P0,
-        install_path: &P1,
+        source_path: &P0,
+        _: &P1, // Build path is the source path
+        install_path: &P2,
         _: &[String], // Dependencies are not necessary for installing
     ) -> Result<(), String> {
-        let source_path = path::absolute(build_path).map_err(|err| err.to_string())?;
+        let source_path = path::absolute(source_path).map_err(|err| err.to_string())?;
         let install_path = path::absolute(install_path).map_err(|err| err.to_string())?;
 
         fs::create_dir_all(install_path).map_err(|e| e.to_string())?;
@@ -195,7 +196,7 @@ impl BuilderImpl for Make {
         }
 
         let mut make = Command::new("make");
-        make.current_dir(build_path);
+        make.current_dir(source_path);
         make.arg("install");
 
         make.stdout(std::process::Stdio::piped());

@@ -164,10 +164,11 @@ impl BuilderImpl for CMake {
         Ok(())
     }
 
-    fn install<P0: AsRef<Path>, P1: AsRef<Path>>(
+    fn install<P0: AsRef<Path>, P1: AsRef<Path>, P2: AsRef<Path>>(
         &self,
-        build_path: &P0,
-        install_path: &P1,
+        _: &P0, // Source path is not necessary for installation
+        build_path: &P1,
+        install_path: &P2,
         dependencies: &[String],
     ) -> Result<(), String> {
         let build_path = path::absolute(build_path).map_err(|err| err.to_string())?;

@@ -99,13 +99,14 @@ impl Module {
     /// # Errors
     /// Errors if the installation fails. The [`Result`] output contains a [`String`]
     /// with either an error message or the output of the errored program.
-    pub fn install<P0: AsRef<Path> + std::fmt::Debug, P1: AsRef<Path> + std::fmt::Debug>(
+    pub fn install<P0: AsRef<Path>, P1: AsRef<Path>, P2: AsRef<Path>>(
         &self,
-        build_path: &P0,
-        install_path: &P1,
+        source_path: &P0,
+        build_path: &P1,
+        install_path: &P2,
     ) -> Result<(), String> {
         self.builder
-            .install(build_path, install_path, &self.dependencies)
+            .install(source_path, build_path, install_path, &self.dependencies)
     }
 
     /// Extract a [`Module`] object from a python object.
@@ -302,5 +303,9 @@ pub fn install(module: &Module) -> Result<(), String> {
     build(module)?;
 
     log::status(&format!("Installing '{}'", module.identifier));
-    module.install(&module.build_path, &module.install_path)
+    module.install(
+        &module.download_path,
+        &module.build_path,
+        &module.install_path,
+    )
 }

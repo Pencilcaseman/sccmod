@@ -47,10 +47,11 @@ pub trait BuilderImpl: Sized {
     ///  - Build directory does not exist
     ///  - Build directory does not contain valid installation information
     ///  - The install files cannot be written to `install_path`
-    fn install<P0: AsRef<Path>, P1: AsRef<Path>>(
+    fn install<P0: AsRef<Path>, P1: AsRef<Path>, P2: AsRef<Path>>(
         &self,
-        build_path: &P0,
-        install_path: &P1,
+        source_path: &P0,
+        build_path: &P1,
+        install_path: &P2,
         dependencies: &[String],
     ) -> Result<(), String>;
 }
@@ -85,15 +86,18 @@ impl BuilderImpl for Builder {
         }
     }
 
-    fn install<P0: AsRef<Path>, P1: AsRef<Path>>(
+    fn install<P0: AsRef<Path>, P1: AsRef<Path>, P2: AsRef<Path>>(
         &self,
-        build_path: &P0,
-        install_path: &P1,
+        source_path: &P0,
+        build_path: &P1,
+        install_path: &P2,
         dependencies: &[String],
     ) -> Result<(), String> {
         match self {
-            Self::CMake(cmake) => cmake.install(build_path, install_path, dependencies),
-            Self::Make(make) => make.install(build_path, install_path, dependencies),
+            Self::CMake(cmake) => {
+                cmake.install(source_path, build_path, install_path, dependencies)
+            }
+            Self::Make(make) => make.install(source_path, build_path, install_path, dependencies),
         }
     }
 }
