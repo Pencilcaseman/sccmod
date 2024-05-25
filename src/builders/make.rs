@@ -51,17 +51,17 @@ impl Make {
             shell.add_command(&format!("module load {dep}"));
         }
 
-        shell.add_command(&format!("./configure --prefix={install_path:?}"));
+        // shell.add_command(&format!("./configure --prefix={install_path:?}"));
 
-        let mut make_cmd = format!("cmake {source_path:?}");
+        let mut configure_cmd = format!("./configure --prefix={install_path:?}");
 
         if let Some(flags) = &self.configure_flags {
             for flag in flags {
-                make_cmd.push_str(&format!(" {flag}"));
+                configure_cmd.push_str(&format!(" {flag}"));
             }
         }
 
-        shell.add_command(&make_cmd);
+        shell.add_command(&configure_cmd);
 
         // configure.stdout(std::process::Stdio::piped());
         // configure.stderr(std::process::Stdio::piped());
