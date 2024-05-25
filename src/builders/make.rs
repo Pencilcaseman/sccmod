@@ -50,6 +50,8 @@ impl Make {
             shell.add_command(&format!("module load {dep}"));
         }
 
+        shell.add_command(&format!("./configure --prefix={install_path:?}"));
+
         let mut make_cmd = format!("cmake {source_path:?}");
 
         if let Some(flags) = &self.configure_flags {
@@ -57,8 +59,6 @@ impl Make {
                 make_cmd.push_str(&format!(" {flag}"));
             }
         }
-
-        shell.add_command(&format!("--prefix={install_path:?}"));
 
         shell.add_command(&make_cmd);
 

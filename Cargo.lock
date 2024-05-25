@@ -377,7 +377,7 @@ dependencies = [
 
 [[package]]
 name = "sccmod"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anstyle",
  "clap",
