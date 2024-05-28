@@ -43,7 +43,7 @@ pub struct Module {
     pub metadata: HashMap<String, String>,
 
     /// Environment variables to set/change
-    pub environment: HashMap<String, Environment>,
+    pub environment: Vec<(String, Environment)>,
 
     /// Path root (${root}/${name}/${version})
     pub root: String,
@@ -217,7 +217,7 @@ impl Module {
                 }
             }).collect::<Result<Vec<Dependency>, String>>()?;
 
-            let environment: HashMap<String, (String, String)> = extract_object(
+            let environment: Vec<(String, (String, String))> = extract_object(
                 object,
                 "environment",
             )?
@@ -225,7 +225,7 @@ impl Module {
             .map_err(|err| format!("Failed to call '.environment()': {err}"))?
             .extract()
             .map_err(|err| {
-                format!("Failed to convert output of `.environment()` to Rust HashMap<String, (String, String)>: {err}")
+                format!("Failed to convert output of `.environment()` to Rust Vec<(String, (String, String))>: {err}")
             })?;
 
             // Convert (String, String) to Environment(String)
@@ -237,7 +237,7 @@ impl Module {
                     "prepend" => Ok((name, Environment::Prepend(value))),
                     other => Err(format!("Invalid environment variable operation '{other}'")),
                 })
-                .collect::<Result<HashMap<String, Environment>, String>>()?;
+                .collect::<Result<Vec<(String, Environment)>, String>>()?;
 
             let builder = Builder::from_py(
                 &extract_object(object, "build")?
