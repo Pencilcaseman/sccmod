@@ -272,8 +272,8 @@ impl Module {
             let build_path = format!("{source_path}/sccmod_build");
 
             let install_path = format!(
-                "{1:}{0:}{2:}{0:}{3:}",
-                PATH_SEP, config.install_root, root, name
+                "{1:}{0:}{2:}{0:}{3:}-{4:}",
+                PATH_SEP, config.install_root, root, name, version
             );
 
             Ok(Self {
