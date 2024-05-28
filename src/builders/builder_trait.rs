@@ -4,7 +4,7 @@ use pyo3::{Bound, PyAny};
 use std::fmt::Debug;
 use std::path::Path;
 
-pub trait BuilderImpl: Sized {
+pub trait BuilderImpl: Sized + Clone {
     /// Generate a builder object from a python object.
     ///
     /// Returns [`Ok(obj)`] if the operation was successful, otherwise [`Err(string)`]
@@ -56,7 +56,7 @@ pub trait BuilderImpl: Sized {
     ) -> Result<(), String>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Builder {
     CMake(CMake),
     Make(Make),

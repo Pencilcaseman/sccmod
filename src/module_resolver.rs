@@ -21,7 +21,7 @@ pub fn resolve(partials: &[&str]) -> Result<ResolveMatch, String> {
         .filter(|module| {
             partials.iter().map(|p| p.to_lowercase()).all(|partial| {
                 module
-                    .identifier
+                    .identifier()
                     .to_lowercase()
                     .contains(&partial.to_lowercase())
             })

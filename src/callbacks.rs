@@ -43,7 +43,7 @@ pub fn resolver_boilerplate(
 
                 err.push_str(&format!(
                     "  {index_str}: {}\n",
-                    item.identifier.bold().cyan()
+                    item.identifier().bold().cyan()
                 ));
             }
 
@@ -86,6 +86,22 @@ pub fn resolver_boilerplate(
     }
 }
 
+pub fn info(config: &config::Config) -> Result<(), String> {
+    fn fmt<T: std::fmt::Debug>(name: &str, value: &T) {
+        // println!("{}", format!("{name} {value:?}").bold().purple());
+        println!("{} {}", name.bold().purple(), format!("{value:?}").cyan());
+    }
+
+    fmt("config file . . . . :", &std::env::var("SCCMOD_CONFIG"));
+    fmt("sccmod_module_paths :", &config.sccmod_module_paths);
+    fmt("modulefile root . . :", &config.modulefile_root);
+    fmt("build_root  . . . . :", &config.build_root);
+    fmt("install_root  . . . :", &config.install_root);
+    fmt("shell . . . . . . . :", &config.shell);
+
+    Ok(())
+}
+
 /// A callback function to list all available modules
 ///
 /// # Errors
@@ -95,7 +111,7 @@ pub fn list_callback(_config: &config::Config) -> Result<(), String> {
     println!("{}", "Available Modules:".bold().purple());
 
     for p in &get_modules()? {
-        println!(" > {}", p.identifier.bold().cyan());
+        println!(" > {}", p.identifier().bold().cyan());
     }
 
     Ok(())

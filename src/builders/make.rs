@@ -3,7 +3,7 @@ use pyo3::prelude::PyAnyMethods;
 use pyo3::{Bound, PyAny};
 use std::{fs, path, path::Path, process::Command};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Make {
     pub configure: bool,
     pub jobs: usize,

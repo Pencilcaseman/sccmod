@@ -11,6 +11,7 @@ fn main() -> Result<(), String> {
     // println!("{:?}", shell.exec());
 
     let config = config::read()?;
+
     // println!("Module Paths: {:?}", config.module_paths);
     // println!("Build Root: {}", config.build_root);
     // println!("Install Root: {}", config.install_root);
@@ -22,6 +23,13 @@ fn cli(config: &config::Config) -> Result<(), String> {
     let command = cli::Command {
         name: "sccmod",
         subcommands: vec![
+            cli::Command {
+                name: "info",
+                subcommands: Vec::new(),
+                arguments: Vec::new(),
+                help: "Print sccmod information",
+                callback: Some(callbacks::info),
+            },
             cli::Command {
                 name: "list",
                 subcommands: Vec::new(),

@@ -4,7 +4,7 @@ use std::{fs, path::Path, process::Command};
 
 const FILE_NAME: &str = "curl_download_result";
 
-pub trait DownloaderImpl: Sized {
+pub trait DownloaderImpl: Sized + Clone {
     /// Convert from a Python `Downloader` instance to a Rust [`Downloader`] instance.
     /// If this is not possible (due to an invalid value, for example), [`Err`] is returned
     /// containing an error message as a [`String`]
@@ -266,7 +266,7 @@ impl DownloaderImpl for Curl {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Downloader {
     GitClone(GitClone),
     Curl(Curl),

@@ -3,7 +3,7 @@ use pyo3::prelude::PyAnyMethods;
 use pyo3::{Bound, PyAny};
 use std::{fs, path, path::Path};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CMakeBuildType {
     Debug,
     Release,
@@ -11,7 +11,7 @@ pub enum CMakeBuildType {
     MinSizeRel,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CMake {
     pub build_type: CMakeBuildType,
     pub jobs: usize,

@@ -1,9 +1,11 @@
+use crate::module::Module;
 use std::fs;
 use toml::Table;
 
 #[derive(Debug)]
 pub struct Config {
-    pub module_paths: Vec<String>,
+    pub sccmod_module_paths: Vec<String>,
+    pub modulefile_root: String,
     pub build_root: String,
     pub install_root: String,
     pub shell: String,
@@ -33,7 +35,7 @@ pub fn read() -> Result<Config, String> {
 
     let table = config.parse::<Table>().map_err(|err| err.to_string())?;
 
-    let module_paths: Vec<String> = table["module_paths"]
+    let sccmod_module_paths: Vec<String> = table["sccmod_module_paths"]
         .as_array()
         .ok_or_else(|| "`module_paths` must be an array of strings".to_string())
         .and_then(|paths| {
@@ -46,6 +48,11 @@ pub fn read() -> Result<Config, String> {
                 })
                 .collect()
         })?;
+
+    let modulefile_root: String = table["modulefile_root"]
+        .as_str()
+        .ok_or_else(|| "`modulefile_root` must be a string".to_string())?
+        .to_string();
 
     let build_root: String = table["build_root"]
         .as_str()
@@ -63,7 +70,8 @@ pub fn read() -> Result<Config, String> {
         .to_string();
 
     Ok(Config {
-        module_paths,
+        sccmod_module_paths,
+        modulefile_root,
         build_root,
         install_root,
         shell,

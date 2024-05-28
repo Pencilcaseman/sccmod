@@ -15,6 +15,7 @@ pub mod config;
 pub mod downloaders;
 pub mod environment;
 pub mod file_manager;
+pub mod flavours;
 pub mod info;
 pub mod log;
 pub mod module;

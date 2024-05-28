@@ -1,13 +1,17 @@
 use colored::Colorize;
 use std::io::Write;
 
+fn remove_tabs(txt: &str) -> String {
+    txt.replace('\t', " ")
+}
+
 /// Print `message` as an error to the console and panic
 #[allow(clippy::missing_panics_doc)]
 pub fn error(message: &str) -> ! {
     println!(
         "{} : {}",
         "SCCMod Err".bold().truecolor(255, 0, 0),
-        message.italic().truecolor(255, 100, 25)
+        remove_tabs(message).italic().truecolor(255, 100, 25)
     );
     panic!("An error occurred");
 }
@@ -17,7 +21,7 @@ pub fn warn(message: &str) {
     println!(
         "{}: {}",
         "SCCMod Warn".bold().truecolor(255, 255, 0),
-        message.italic().truecolor(225, 225, 50)
+        remove_tabs(message).italic().truecolor(225, 225, 50)
     );
 }
 
@@ -26,7 +30,7 @@ pub fn info(message: &str) {
     println!(
         "{}: {}",
         "SCCMod Info".bold().truecolor(50, 150, 255),
-        message.italic().truecolor(50, 150, 255)
+        remove_tabs(message).italic().truecolor(50, 150, 255)
     );
 }
 
@@ -35,7 +39,7 @@ pub fn status(message: &str) {
     println!(
         "{}: {}",
         "SCCMod Status".bold().truecolor(200, 65, 215),
-        message.italic().truecolor(230, 55, 235)
+        remove_tabs(message).italic().truecolor(230, 55, 235)
     );
 }
 
@@ -53,7 +57,7 @@ pub fn info_carriage(message: &str) {
     print!(
         "{}: {}\r",
         "SCCMod Info".bold().truecolor(50, 150, 255),
-        message.italic().truecolor(50, 150, 255)
+        remove_tabs(message).italic().truecolor(50, 150, 255)
     );
 
     std::io::stdout().flush().unwrap();
@@ -73,7 +77,7 @@ pub fn warn_carriage(message: &str) {
     print!(
         "{}: {}\r",
         "SCCMod Warn".bold().truecolor(255, 255, 0),
-        message.italic().truecolor(225, 225, 50)
+        remove_tabs(message).italic().truecolor(225, 225, 50)
     );
 
     std::io::stdout().flush().unwrap();

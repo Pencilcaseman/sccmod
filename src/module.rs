@@ -3,7 +3,7 @@ use crate::{
     config,
     downloaders::{Downloader, DownloaderImpl},
     file_manager::{recursive_list_dir, PATH_SEP},
-    log,
+    flavours, log, modulefile,
     shell::Shell,
 };
 
@@ -11,44 +11,103 @@ use crate::python_interop::{extract_object, load_program};
 use pyo3::prelude::*;
 use std::collections::HashMap;
 use std::fs::DirEntry;
-use std::path::Path;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub enum Dependency {
+    Class(String),
+    Module(String),
+}
+
+#[derive(Debug, Clone)]
+pub enum Environment {
+    Set(String),
+    Append(String),
+    Prepend(String),
+}
+
+#[derive(Debug, Clone)]
 pub struct Module {
-    /// Unique identifier for the module
-    pub identifier: String,
+    /// Name of the module
+    pub name: String,
 
-    /// Path to the module file
-    pub modulefile: Vec<String>,
+    /// Module version
+    pub version: String,
 
-    /// Path to download the source code
-    pub download_path: String,
+    /// Module class (flavours)
+    pub class: String,
 
-    /// Path to build the source code
-    pub build_path: String,
+    /// Module dependencies
+    pub dependencies: Vec<Dependency>,
 
-    /// Path to install the source coe
-    pub install_path: String,
+    /// Module metadata
+    pub metadata: HashMap<String, String>,
 
-    /// A list of dependencies which can be `module load ...`'ed
-    pub dependencies: Vec<String>,
+    /// Environment variables to set/change
+    pub environment: HashMap<String, Environment>,
+
+    /// Path root (${root}/${name}/${version})
+    pub root: String,
 
     /// A list of commands to run before building
     pub pre_build: Option<Vec<String>>,
 
+    /// Downloader to download the source code
     pub downloader: Downloader,
+
+    /// Builder to build and install the source code
     pub builder: Builder,
-    pub metadata: HashMap<String, String>,
+
+    pub source_path: String,
+    pub build_path: String,
+    pub install_path: String,
 }
 
 impl Module {
+    /// Parse a flavour into:
+    ///  - flavour_str: a postfix to a path pointing to a flavour directory
+    ///  - build_path: updated build path
+    ///  - install_path: updated install path
+    ///  - modules: module names necessary for installation
+    pub fn parse(&self, flavour: &(&[Module], usize)) -> (String, String, String, Vec<String>) {
+        // Generate extension to build path based on flavour
+        let mut flavour_str = format!("{PATH_SEP}1{PATH_SEP}"); // '/1/' for revision
+
+        // If no class modules are required, install into `default` flavour
+        if flavour.1 == 0 {
+            flavour_str.push_str(&format!("default"))
+        } else {
+            for (i, flav) in (0..flavour.1).zip(flavour.0.iter()) {
+                flavour_str.push_str(&format!("{}-{}", &flav.name, &flav.version));
+
+                if i + 1 < flavour.1 {
+                    flavour_str.push('-');
+                }
+            }
+        }
+
+        let build_path = self.build_path.clone() + &flavour_str;
+        let install_path = self.install_path.clone() + &flavour_str;
+
+        let modules: Vec<String> = flavour
+            .0
+            .iter()
+            .map(|flav| format!("{}/{}/{}", flav.root, flav.name, flav.version))
+            .collect();
+
+        (flavour_str, build_path, install_path, modules)
+    }
+
+    pub fn identifier(&self) -> String {
+        format!("{}/{}/{}", self.root, self.name, self.version)
+    }
+
     /// Download the source code for the module, based on its [`Downloader`].
     ///
     /// # Errors
     /// This will error if the download fails, with an error [`String`] containing
     /// either an error message or the output of the errored command.
-    pub fn download<P: AsRef<Path>>(&self, path: &P) -> Result<(), String> {
-        self.downloader.download(path)
+    pub fn download(&self) -> Result<(), String> {
+        self.downloader.download(&self.source_path)
     }
 
     /// Build the source code for this module, based on its [`Builder`].
@@ -56,21 +115,14 @@ impl Module {
     /// # Errors
     /// This will error if the build fails, with an error [`String`] containing
     /// either an error message or the output of the errored command.
-    pub fn build<
-        P0: AsRef<Path> + std::fmt::Debug,
-        P1: AsRef<Path> + std::fmt::Debug,
-        P2: AsRef<Path>,
-    >(
+    pub fn build(
         &self,
-        source_path: &P0,
-        build_path: &P1,
-        install_path: &P2,
+        flavour: (&[Module], usize), // ([dep0, dep1, ..., depN], num_flavour)
     ) -> Result<(), String> {
         if let Some(commands) = &self.pre_build {
             log::status(&"Running pre-build commands");
-
             let mut shell = Shell::default();
-            shell.set_current_dir(source_path.as_ref().to_str().unwrap());
+            shell.set_current_dir(&self.source_path);
             for cmd in commands {
                 shell.add_command(&cmd);
             }
@@ -90,8 +142,10 @@ impl Module {
             log::status(&"Building...");
         }
 
+        let (_, build_path, install_path, modules) = self.parse(&flavour);
+
         self.builder
-            .build(source_path, build_path, install_path, &self.dependencies)
+            .build(&self.source_path, &build_path, &install_path, &modules)
     }
 
     /// Install the source code for this module based on its [`Builder`].
@@ -99,14 +153,11 @@ impl Module {
     /// # Errors
     /// Errors if the installation fails. The [`Result`] output contains a [`String`]
     /// with either an error message or the output of the errored program.
-    pub fn install<P0: AsRef<Path>, P1: AsRef<Path>, P2: AsRef<Path>>(
-        &self,
-        source_path: &P0,
-        build_path: &P1,
-        install_path: &P2,
-    ) -> Result<(), String> {
+    pub fn install(&self, flavour: (&[Module], usize)) -> Result<(), String> {
+        let (_, build_path, install_path, modules) = self.parse(&flavour);
+
         self.builder
-            .install(source_path, build_path, install_path, &self.dependencies)
+            .install(&self.source_path, &build_path, &install_path, &modules)
     }
 
     /// Extract a [`Module`] object from a python object.
@@ -114,11 +165,7 @@ impl Module {
     /// # Errors
     /// This method will return [`Err(msg)`] if the object cannot be parsed
     /// successfully. `msg` is a string and contains the error message.
-    pub fn from_object<P0: AsRef<Path>>(
-        object: &Bound<PyAny>,
-        path: &P0,
-        config: &config::Config,
-    ) -> Result<Self, String> {
+    pub fn from_object(object: &Bound<PyAny>, config: &config::Config) -> Result<Self, String> {
         Python::with_gil(|_| {
             let metadata: HashMap<String, String> = extract_object(object, "metadata")?
                 .call0()
@@ -128,19 +175,69 @@ impl Module {
                     format!("Failed to convert metadata output to Rust HashMap: {err}")
                 })?;
 
+            let name = metadata
+                .get("name")
+                .ok_or("metadata does not contain key 'name'")?
+                .to_owned();
+
+            let version = metadata
+                .get("version")
+                .ok_or("Metadata does not contain key 'version'")?
+                .to_owned();
+
+            let class = metadata
+                .get("class")
+                .ok_or("Metadata does not contain key 'class'")?
+                .to_owned();
+
             let downloader = Downloader::from_py(
                 &extract_object(object, "download")?
                     .call0()
                     .map_err(|err| format!("Failed to call `download` in module class: {err}"))?,
             )?;
 
-            let dependencies: Vec<String> = extract_object(object, "build_requirements")?
+            let dependencies: Vec<&PyAny> = extract_object(object, "dependencies")?
                 .call0()
                 .map_err(|err| format!("Failed to call `build_requirements`: {err}"))?
                 .extract()
-                .map_err(|err| {
-                    format!("Failed to convert output of `build_requirements()` to Rust Vec: {err}")
-                })?;
+                .map_err(|err| format!("Failed to convert `dependencies()` to Rust Vec: {err}"))?;
+
+            // Convert dependencies into a Rust vector
+            let dependencies: Vec<Dependency> = dependencies.iter().map(|dep| {
+                match dep.get_type().to_string().as_ref() {
+                    "<class 'sccmod.module.Class'>" => {
+                        match dep.getattr("name").map_err(|err| format!("Dependency is a Class instance, but does not contain a .name attribute: {err}"))?.extract::<String>() {
+                            Ok(name) => {
+                                Ok(Dependency::Class(name))
+                            },
+                            Err(e) => Err(format!("Could not convert .name attribute to Rust String: {e}"))
+                        }
+                    },
+                    _ => Ok(Dependency::Module(dep.to_string())),
+                }
+            }).collect::<Result<Vec<Dependency>, String>>()?;
+
+            let environment: HashMap<String, (String, String)> = extract_object(
+                object,
+                "environment",
+            )?
+            .call0()
+            .map_err(|err| format!("Failed to call '.environment()': {err}"))?
+            .extract()
+            .map_err(|err| {
+                format!("Failed to convert output of `.environment()` to Rust HashMap<String, (String, String)>: {err}")
+            })?;
+
+            // Convert (String, String) to Environment(String)
+            let environment = environment
+                .into_iter()
+                .map(|(name, (op, value))| match op.as_ref() {
+                    "set" => Ok((name, Environment::Set(value))),
+                    "append" => Ok((name, Environment::Append(value))),
+                    "prepend" => Ok((name, Environment::Prepend(value))),
+                    other => Err(format!("Invalid environment variable operation '{other}'")),
+                })
+                .collect::<Result<HashMap<String, Environment>, String>>()?;
 
             let builder = Builder::from_py(
                 &extract_object(object, "build")?
@@ -148,11 +245,10 @@ impl Module {
                     .map_err(|err| format!("Failed to call `build` in module class: {err}"))?,
             )?;
 
-            // let pre_build = Builder::from_py(
-            //     &extract_object(object, "pre_build")?
-            //         .call0()
-            //         .map_err(|err| format!("Failed to call `build` in module class: {err}"))?,
-            // )?;
+            let root = metadata
+                .get("root")
+                .ok_or("Metadata does not contain key 'root'")?
+                .to_owned();
 
             let pre_build: Option<Vec<String>> = match extract_object(object, "pre_build") {
                 Ok(obj) => Some(
@@ -168,50 +264,32 @@ impl Module {
                 Err(_) => None,
             };
 
-            // Extract modulefile from the path
-            let modulefile: Vec<String> = path
-                .as_ref()
-                .to_str()
-                .ok_or("Failed to convert filename to string")?
-                .split(PATH_SEP)
-                .map(std::string::ToString::to_string)
-                .collect();
-
-            let identifier = metadata
-                .get("identifier")
-                .ok_or("Metadata does not contain 'identifier' tag")?
-                .replace([' ', '\t'], "_");
-
-            // Download path is ${root}/(${download_path} or ${identifier})
-            let download_path = format!(
-                "{}{}{}",
-                config.build_root,
-                PATH_SEP,
-                metadata
-                    .get("download_path")
-                    .map_or(&identifier, |path| path)
+            let source_path = format!(
+                "{}{PATH_SEP}{}{PATH_SEP}{}",
+                config.build_root, name, version
             );
 
-            let build_path = format!(
-                "{}{}{}",
-                config.build_root,
-                PATH_SEP,
-                metadata.get("build_path").map_or(&identifier, |path| path)
-            );
+            let build_path = format!("{source_path}/sccmod_build");
 
-            let install_path = format!("{}{}{}", config.install_root, PATH_SEP, identifier);
+            let install_path = format!(
+                "{1:}{0:}{2:}{0:}{3:}",
+                PATH_SEP, config.install_root, root, name
+            );
 
             Ok(Self {
-                identifier,
-                modulefile,
-                download_path,
-                build_path,
-                install_path,
+                name,
+                version,
+                class,
                 dependencies,
+                environment,
+                metadata,
+                root,
                 pre_build,
                 downloader,
                 builder,
-                metadata,
+                source_path,
+                build_path,
+                install_path,
             })
         })
     }
@@ -226,7 +304,7 @@ impl Module {
 pub fn get_modules() -> Result<Vec<Module>, String> {
     config::read().and_then(|config| {
         config // Extract module paths
-            .module_paths
+            .sccmod_module_paths
             .iter()
             .flat_map(|path| {
                 // Expand search paths recursively to get *all* files
@@ -256,7 +334,7 @@ pub fn get_modules() -> Result<Vec<Module>, String> {
 
                     modules // Map python objects to Modules
                         .iter()
-                        .map(|module| Module::from_object(module, &path.path(), &config))
+                        .map(|module| Module::from_object(module, &config))
                         .collect::<Result<Vec<Module>, String>>()
                 })
             })
@@ -276,8 +354,8 @@ pub fn get_modules() -> Result<Vec<Module>, String> {
 /// # Errors
 /// Errors if [`Module.download`] fails.
 pub fn download(module: &Module) -> Result<(), String> {
-    log::status(&format!("Downloading '{}'", module.identifier));
-    module.download(&module.download_path)
+    log::status(&format!("Downloading '{}-{}'", module.name, module.version));
+    module.download()
 }
 
 /// Download and build a module.
@@ -287,12 +365,15 @@ pub fn download(module: &Module) -> Result<(), String> {
 pub fn build(module: &Module) -> Result<(), String> {
     download(module)?;
 
-    log::status(&format!("Building '{}'", module.identifier));
-    module.build(
-        &module.download_path,
-        &module.build_path,
-        &module.install_path,
-    )
+    log::status(&format!("Building '{}-{}'", module.name, module.version));
+
+    let flavs = flavours::generate(module)?;
+
+    for flav in &flavs {
+        module.build((&flav.0, flav.1))?;
+    }
+
+    Ok(())
 }
 
 /// Download, build and install a module.
@@ -302,10 +383,25 @@ pub fn build(module: &Module) -> Result<(), String> {
 pub fn install(module: &Module) -> Result<(), String> {
     build(module)?;
 
-    log::status(&format!("Installing '{}'", module.identifier));
-    module.install(
-        &module.download_path,
-        &module.build_path,
-        &module.install_path,
-    )
+    log::status(&format!("Installing '{}-{}'", module.name, module.version));
+
+    let flavs = flavours::generate(module)?;
+
+    for flav in &flavs {
+        module.install((&flav.0, flav.1))?;
+    }
+
+    // Write modulefile
+    log::status("Writing Modulefile");
+    let conf = config::read()?;
+    let dir = format!(
+        "{}{PATH_SEP}{}{PATH_SEP}{}{PATH_SEP}{}",
+        conf.modulefile_root, module.root, module.name, module.version
+    );
+    let dir = std::path::Path::new(&dir);
+
+    let content = modulefile::generate(module);
+
+    std::fs::create_dir_all(dir.parent().unwrap()).unwrap();
+    std::fs::write(dir, content).map_err(|err| format!("Failed to write modulefile: {err}"))
 }
