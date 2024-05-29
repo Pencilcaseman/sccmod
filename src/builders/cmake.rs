@@ -189,7 +189,7 @@ impl BuilderImpl for CMake {
             shell.add_command(&format!("module load {dep}"));
         }
 
-        shell.add_command(&format!("cmake --install . --preifx {install_path:?}"));
+        shell.add_command(&format!("cmake --install . --prefix {install_path:?}"));
 
         let (result, stdout, stderr) = shell.exec();
 
