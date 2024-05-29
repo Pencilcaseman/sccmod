@@ -1,4 +1,4 @@
-use crate::{builders::builder_trait::BuilderImpl, log, shell::Shell};
+use crate::{builders::builder_trait::BuilderImpl, file_manager::PATH_SEP, log, shell::Shell};
 use pyo3::prelude::PyAnyMethods;
 use pyo3::{Bound, PyAny};
 use std::{fs, path, path::Path};
@@ -156,7 +156,7 @@ impl BuilderImpl for CMake {
         dependencies: &[String],
     ) -> Result<(), String> {
         let cmake_source_path = if let Some(root) = &self.cmake_root {
-            source_path.as_ref().to_str().unwrap().to_owned() + root
+            source_path.as_ref().to_str().unwrap().to_owned() + PATH_SEP.to_string().as_ref() + root
         } else {
             source_path.as_ref().to_str().unwrap().to_owned()
         };
