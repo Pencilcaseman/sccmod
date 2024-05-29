@@ -16,6 +16,7 @@ pub struct CMake {
     pub build_type: CMakeBuildType,
     pub jobs: usize,
     pub configure_flags: Option<Vec<String>>,
+    pub cmake_root: Option<String>,
 }
 
 impl CMake {
@@ -73,15 +74,6 @@ impl CMake {
         path: &P,
         dependencies: &[String],
     ) -> Result<(), String> {
-        // let mut cmake = Command::new("cmake");
-        // cmake.current_dir(path);
-        // cmake.arg("--build");
-        // cmake.arg(".");
-        // cmake.arg(format!("--config {:?}", self.build_type));
-        // cmake.arg(format!("--parallel {:?}", self.jobs));
-        // cmake.stdout(std::process::Stdio::piped());
-        // cmake.stderr(std::process::Stdio::piped());
-
         let mut shell = Shell::default();
         shell.set_current_dir(path.as_ref().to_str().unwrap());
         for dep in dependencies {
@@ -92,9 +84,6 @@ impl CMake {
             "cmake --build . --config {:?} --parallel {:?}",
             self.build_type, self.jobs
         ));
-
-        // let spawn = cmake.spawn().map_err(|e| e.to_string())?;
-        // let (result, stdout, stderr) = child_logger(spawn);
 
         let (result, stdout, stderr) = shell.exec();
 
@@ -141,10 +130,17 @@ impl BuilderImpl for CMake {
             .extract()
             .map_err(|_| "Failed to convert attribute 'configure_flags' to Rust Vec<String>")?;
 
+        let cmake_root: Option<String> = object
+            .getattr("cmake_root")
+            .map_err(|_| "Failed to read attribute 'cmake_root' of Builder object")?
+            .extract()
+            .map_err(|_| "Failed to convert attribute 'cmake_root' to Rust String")?;
+
         Ok(Self {
             build_type,
             jobs,
             configure_flags,
+            cmake_root,
         })
     }
 
@@ -159,7 +155,13 @@ impl BuilderImpl for CMake {
         _: &P2,
         dependencies: &[String],
     ) -> Result<(), String> {
-        self.configure(source_path, build_path, dependencies)?;
+        let cmake_source_path = if let Some(root) = &self.cmake_root {
+            source_path.as_ref().to_str().unwrap().to_owned() + root
+        } else {
+            source_path.as_ref().to_str().unwrap().to_owned()
+        };
+
+        self.configure(&cmake_source_path, build_path, dependencies)?;
         self.compile(build_path, dependencies)?;
         Ok(())
     }
@@ -180,18 +182,6 @@ impl BuilderImpl for CMake {
             return Err(format!("Build directory {build_path:?} does not exist"));
         }
 
-        // let mut cmake = Command::new("cmake");
-        // cmake.current_dir(&build_path);
-        // cmake.arg("--install");
-        // cmake.arg(".");
-        // cmake.arg(format!("--config {:?}", self.build_type));
-        // cmake.arg(format!(
-        //     "--prefix {}",
-        //     install_path
-        //         .to_str()
-        //         .ok_or("Failed to convert path to string")?
-        // ));
-
         let mut shell = Shell::default();
         shell.set_current_dir(build_path.to_str().unwrap());
 
@@ -200,12 +190,6 @@ impl BuilderImpl for CMake {
         }
 
         shell.add_command(&format!("cmake --install . --preifx {install_path:?}"));
-
-        // cmake.stdout(std::process::Stdio::piped());
-        // cmake.stderr(std::process::Stdio::piped());
-        // let spawn = cmake.spawn().map_err(|e| e.to_string())?;
-
-        // let (result, stdout, stderr) = child_logger(spawn);
 
         let (result, stdout, stderr) = shell.exec();
 
