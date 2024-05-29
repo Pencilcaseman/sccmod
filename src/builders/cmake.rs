@@ -48,7 +48,7 @@ impl CMake {
             }
         }
 
-        cmake_cmd.push_str(&format!("-DCMAKE_BUILD_TYPE={:?}", self.build_type));
+        cmake_cmd.push_str(&format!(" -DCMAKE_BUILD_TYPE={:?}", self.build_type));
         shell.add_command(&cmake_cmd);
 
         let (result, stdout, stderr) = shell.exec();
