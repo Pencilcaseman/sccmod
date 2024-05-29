@@ -1,7 +1,7 @@
 use crate::{
     builders::builder_trait::{Builder, BuilderImpl},
     config,
-    downloaders::{Downloader, DownloaderImpl},
+    downloaders::{self, Downloader, DownloaderImpl},
     file_manager::{recursive_list_dir, PATH_SEP},
     flavours, log, modulefile,
     shell::Shell,
@@ -45,17 +45,14 @@ pub struct Module {
     /// Environment variables to set/change
     pub environment: Vec<(String, Environment)>,
 
-    /// Path root (${root}/${name}/${version})
-    pub root: String,
-
     /// A list of commands to run before building
     pub pre_build: Option<Vec<String>>,
 
     /// Downloader to download the source code
-    pub downloader: Downloader,
+    pub downloader: Option<Downloader>,
 
     /// Builder to build and install the source code
-    pub builder: Builder,
+    pub builder: Option<Builder>,
 
     pub source_path: String,
     pub build_path: String,
@@ -91,14 +88,14 @@ impl Module {
         let modules: Vec<String> = flavour
             .0
             .iter()
-            .map(|flav| format!("{}/{}/{}", flav.root, flav.name, flav.version))
+            .map(|flav| format!("{}/{}/{}", flav.class, flav.name, flav.version))
             .collect();
 
         (flavour_str, build_path, install_path, modules)
     }
 
     pub fn identifier(&self) -> String {
-        format!("{}/{}/{}", self.root, self.name, self.version)
+        format!("{}/{}/{}", self.class, self.name, self.version)
     }
 
     /// Download the source code for the module, based on its [`Downloader`].
@@ -107,7 +104,16 @@ impl Module {
     /// This will error if the download fails, with an error [`String`] containing
     /// either an error message or the output of the errored command.
     pub fn download(&self) -> Result<(), String> {
-        self.downloader.download(&self.source_path)
+        if let Some(downloader) = &self.downloader {
+            downloader.download(&self.source_path)
+        } else {
+            log::warn(&format!(
+                "Module '{}' does not hav a builder",
+                self.identifier()
+            ));
+
+            Ok(())
+        }
     }
 
     /// Build the source code for this module, based on its [`Builder`].
@@ -119,33 +125,40 @@ impl Module {
         &self,
         flavour: (&[Module], usize), // ([dep0, dep1, ..., depN], num_flavour)
     ) -> Result<(), String> {
-        if let Some(commands) = &self.pre_build {
-            log::status(&"Running pre-build commands");
-            let mut shell = Shell::default();
-            shell.set_current_dir(&self.source_path);
-            for cmd in commands {
-                shell.add_command(&cmd);
+        if let Some(builder) = &self.builder {
+            if let Some(commands) = &self.pre_build {
+                log::status(&"Running pre-build commands");
+                let mut shell = Shell::default();
+                shell.set_current_dir(&self.source_path);
+                for cmd in commands {
+                    shell.add_command(&cmd);
+                }
+
+                let (result, stdout, stderr) = shell.exec();
+
+                let result = result.map_err(|_| "Failed to run CMake command")?;
+
+                if !result.success() {
+                    return Err(format!(
+                        "Failed to execute command. Output:\n{}\n{}",
+                        stdout.join("\n"),
+                        stderr.join("\n")
+                    ));
+                }
+
+                log::status(&"Building...");
             }
 
-            let (result, stdout, stderr) = shell.exec();
+            let (_, build_path, install_path, modules) = self.parse(&flavour);
 
-            let result = result.map_err(|_| "Failed to run CMake command")?;
-
-            if !result.success() {
-                return Err(format!(
-                    "Failed to execute command. Output:\n{}\n{}",
-                    stdout.join("\n"),
-                    stderr.join("\n")
-                ));
-            }
-
-            log::status(&"Building...");
+            builder.build(&self.source_path, &build_path, &install_path, &modules)
+        } else {
+            log::warn(&format!(
+                "Module '{}' does not have a Builder",
+                self.identifier()
+            ));
+            Ok(())
         }
-
-        let (_, build_path, install_path, modules) = self.parse(&flavour);
-
-        self.builder
-            .build(&self.source_path, &build_path, &install_path, &modules)
     }
 
     /// Install the source code for this module based on its [`Builder`].
@@ -154,10 +167,17 @@ impl Module {
     /// Errors if the installation fails. The [`Result`] output contains a [`String`]
     /// with either an error message or the output of the errored program.
     pub fn install(&self, flavour: (&[Module], usize)) -> Result<(), String> {
-        let (_, build_path, install_path, modules) = self.parse(&flavour);
+        if let Some(builder) = &self.builder {
+            let (_, build_path, install_path, modules) = self.parse(&flavour);
 
-        self.builder
-            .install(&self.source_path, &build_path, &install_path, &modules)
+            builder.install(&self.source_path, &build_path, &install_path, &modules)
+        } else {
+            log::warn(&format!(
+                "Module '{}' does not have a Builder",
+                self.identifier()
+            ));
+            Ok(())
+        }
     }
 
     /// Extract a [`Module`] object from a python object.
@@ -190,11 +210,19 @@ impl Module {
                 .ok_or("Metadata does not contain key 'class'")?
                 .to_owned();
 
-            let downloader = Downloader::from_py(
-                &extract_object(object, "download")?
-                    .call0()
-                    .map_err(|err| format!("Failed to call `download` in module class: {err}"))?,
-            )?;
+            // let downloader = Downloader::from_py(
+            //     &extract_object(object, "download")?
+            //         .call0()
+            //         .map_err(|err| format!("Failed to call `download` in module class: {err}"))?,
+            // )?;
+
+            let downloader: Result<Option<Downloader>, String> = match object.getattr("download") {
+                Ok(download) => Ok(Some(Downloader::from_py(&download.call0().map_err(
+                    |err| format!("Failed to call `download` in module class: {err}"),
+                )?)?)),
+                Err(_) => Ok(None),
+            };
+            let downloader = downloader?;
 
             let dependencies: Vec<&PyAny> = extract_object(object, "dependencies")?
                 .call0()
@@ -239,16 +267,19 @@ impl Module {
                 })
                 .collect::<Result<Vec<(String, Environment)>, String>>()?;
 
-            let builder = Builder::from_py(
-                &extract_object(object, "build")?
-                    .call0()
-                    .map_err(|err| format!("Failed to call `build` in module class: {err}"))?,
-            )?;
+            // let builder = Builder::from_py(
+            //     &extract_object(object, "build")?
+            //         .call0()
+            //         .map_err(|err| format!("Failed to call `build` in module class: {err}"))?,
+            // )?;
 
-            let root = metadata
-                .get("root")
-                .ok_or("Metadata does not contain key 'root'")?
-                .to_owned();
+            let builder: Result<Option<Builder>, String> = match object.getattr("build") {
+                Ok(download) => Ok(Some(Builder::from_py(&download.call0().map_err(
+                    |err| format!("Failed to call `build` in module class: {err}"),
+                )?)?)),
+                Err(_) => Ok(None),
+            };
+            let builder = builder?;
 
             let pre_build: Option<Vec<String>> = match extract_object(object, "pre_build") {
                 Ok(obj) => Some(
@@ -273,7 +304,7 @@ impl Module {
 
             let install_path = format!(
                 "{1:}{0:}{2:}{0:}{3:}-{4:}",
-                PATH_SEP, config.install_root, root, name, version
+                PATH_SEP, config.install_root, class, name, version
             );
 
             Ok(Self {
@@ -283,7 +314,6 @@ impl Module {
                 dependencies,
                 environment,
                 metadata,
-                root,
                 pre_build,
                 downloader,
                 builder,
@@ -396,7 +426,7 @@ pub fn install(module: &Module) -> Result<(), String> {
     let conf = config::read()?;
     let dir = format!(
         "{}{PATH_SEP}{}{PATH_SEP}{}{PATH_SEP}{}",
-        conf.modulefile_root, module.root, module.name, module.version
+        conf.modulefile_root, module.class, module.name, module.version
     );
     let dir = std::path::Path::new(&dir);
 

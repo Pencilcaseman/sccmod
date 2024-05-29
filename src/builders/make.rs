@@ -45,7 +45,7 @@ impl Make {
         // ));
 
         let mut shell = Shell::default();
-        shell.set_current_dir(source_path.to_str().unwrap());
+        shell.set_current_dir(&source_path.to_str().unwrap());
 
         for dep in dependencies {
             shell.add_command(&format!("module load {dep}"));
@@ -113,7 +113,7 @@ impl Make {
             shell.add_command(&format!("module load {dep}"));
         }
 
-        shell.set_current_dir(path.as_ref().to_str().unwrap());
+        shell.set_current_dir(&path.as_ref().to_str().unwrap());
         shell.add_command(&format!("make -j {}", self.jobs));
 
         let (result, stdout, stderr) = shell.exec();

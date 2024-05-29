@@ -1,4 +1,4 @@
-use crate::archive;
+use crate::{archive, file_manager, log, shell::Shell};
 use pyo3::prelude::*;
 use std::{fs, path::Path, process::Command};
 
@@ -36,6 +36,7 @@ pub struct GitClone {
     commit: Option<String>,
     submodules: bool,
     shallow: bool,
+    patches: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +55,7 @@ impl GitClone {
             commit: None,
             submodules: true,
             shallow: false,
+            patches: None,
         }
     }
 }
@@ -94,12 +96,19 @@ impl DownloaderImpl for GitClone {
             Err(_) => false,
         };
 
+        let patches: Option<Vec<String>> = object
+            .getattr("patches")
+            .map_err(|_| "Failed to read attribute 'patches' of Builder object")?
+            .extract()
+            .map_err(|_| "Failed to convert attribute 'patches' to Rust Vec<String>")?;
+
         Ok(Self {
             url,
             branch,
             commit,
             submodules,
             shallow,
+            patches,
         })
     }
 
@@ -180,6 +189,54 @@ impl DownloaderImpl for GitClone {
                 stdout.join("\n"),
                 stderr.join("\n")
             ));
+        }
+
+        // Apply patches if necessary
+        if let Some(patches) = &self.patches {
+            for patch in patches.iter() {
+                log::info(&format!(
+                    "Downloading patch: {}",
+                    &patch[patch.len().max(32) - 32..]
+                ));
+
+                let mut shell = Shell::default();
+                shell.set_current_dir(path);
+                shell.add_command("mkdir -p sccmod_patches");
+                shell.add_command("cd sccmod_patches");
+                shell.add_command(&format!("curl -O {patch}"));
+
+                let (result, stdout, stderr) = shell.exec();
+
+                if result.is_err() || !result.unwrap().success() {
+                    return Err(format!(
+                        "{msg}: \n{}\n{}",
+                        stdout.join("\n"),
+                        stderr.join("\n")
+                    ));
+                }
+            }
+
+            for file in &file_manager::recursive_list_dir(&format!(
+                "{}/sccmod_patches",
+                path.as_ref().to_str().unwrap()
+            ))
+            .unwrap()
+            {
+                log::info(&format!("Applying patch: {:?}", file.file_name()));
+
+                let mut shell = Shell::default();
+                shell.set_current_dir(path);
+                shell.add_command(&format!(
+                    "git apply --reject --whitespace=fix sccmod_patches/{:?}",
+                    file.file_name()
+                ));
+
+                let (result, _, _) = shell.exec();
+
+                if result.is_err() || !result.unwrap().success() {
+                    log::warn("Errors when applying patch. Proceed with caution.");
+                }
+            }
         }
 
         Ok(())

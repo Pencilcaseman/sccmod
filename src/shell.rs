@@ -2,6 +2,7 @@
 // what I need to do, so now this exists...
 
 use crate::{cli::child_logger, config};
+use std::path::Path;
 use std::process::Command;
 use std::process::ExitStatus;
 
@@ -34,8 +35,8 @@ impl Shell {
         }
     }
 
-    pub fn set_current_dir(&mut self, dir: &str) {
-        self.working_directory = dir.to_string();
+    pub fn set_current_dir<P: AsRef<Path>>(&mut self, dir: &P) {
+        self.working_directory = dir.as_ref().to_str().unwrap().to_owned();
     }
 
     pub fn add_command(&mut self, cmd: &str) {
@@ -57,8 +58,6 @@ impl Shell {
         }
 
         shell.arg(cmd);
-
-        println!("Command: {shell:?}");
 
         child_logger(shell.spawn().unwrap())
     }

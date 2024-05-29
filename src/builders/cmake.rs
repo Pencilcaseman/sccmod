@@ -33,7 +33,7 @@ impl CMake {
         fs::create_dir_all(&output_path).map_err(|e| e.to_string())?;
 
         let mut shell = Shell::default();
-        shell.set_current_dir(output_path.to_str().unwrap());
+        shell.set_current_dir(&output_path.to_str().unwrap());
 
         for dep in dependencies {
             shell.add_command(&format!("module load {dep}"));
@@ -75,7 +75,7 @@ impl CMake {
         dependencies: &[String],
     ) -> Result<(), String> {
         let mut shell = Shell::default();
-        shell.set_current_dir(path.as_ref().to_str().unwrap());
+        shell.set_current_dir(&path.as_ref().to_str().unwrap());
         for dep in dependencies {
             shell.add_command(&format!("module load {dep}"));
         }
@@ -183,7 +183,7 @@ impl BuilderImpl for CMake {
         }
 
         let mut shell = Shell::default();
-        shell.set_current_dir(build_path.to_str().unwrap());
+        shell.set_current_dir(&build_path.to_str().unwrap());
 
         for dep in dependencies {
             shell.add_command(&format!("module load {dep}"));
