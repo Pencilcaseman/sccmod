@@ -340,6 +340,22 @@ impl Module {
             })
         })
     }
+
+    pub fn modulefile(&self) -> Result<(), String> {
+        // Write modulefile
+        log::status(&format!("Writing Modulefile for {}", self.mod_name()));
+        let conf = config::read()?;
+        let dir = format!(
+            "{}{PATH_SEP}{}{PATH_SEP}{}{PATH_SEP}{}",
+            conf.modulefile_root, self.class, self.name, self.version
+        );
+        let dir = std::path::Path::new(&dir);
+
+        let content = modulefile::generate(&self);
+
+        std::fs::create_dir_all(dir.parent().unwrap()).unwrap();
+        std::fs::write(dir, content).map_err(|err| format!("Failed to write modulefile: {err}"))
+    }
 }
 
 /// List all available modules
@@ -440,17 +456,9 @@ pub fn install(module: &Module) -> Result<(), String> {
         module.install((&flav.0, flav.1))?;
     }
 
-    // Write modulefile
-    log::status("Writing Modulefile");
-    let conf = config::read()?;
-    let dir = format!(
-        "{}{PATH_SEP}{}{PATH_SEP}{}{PATH_SEP}{}",
-        conf.modulefile_root, module.class, module.name, module.version
-    );
-    let dir = std::path::Path::new(&dir);
+    module.modulefile()
+}
 
-    let content = modulefile::generate(module);
-
-    std::fs::create_dir_all(dir.parent().unwrap()).unwrap();
-    std::fs::write(dir, content).map_err(|err| format!("Failed to write modulefile: {err}"))
+pub fn modulefile(module: &Module) -> Result<(), String> {
+    module.modulefile()
 }

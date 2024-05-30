@@ -1,5 +1,3 @@
-use std::os::unix::process::CommandExt;
-
 use sccmod::{callbacks, cli, cli::NumParams, config};
 
 #[allow(clippy::cognitive_complexity)]
@@ -89,6 +87,24 @@ fn cli(config: &config::Config) -> Result<(), String> {
                     callback: callbacks::install_module,
                 }],
                 help: "Install a module",
+                callback: None,
+            },
+            cli::Command {
+                name: "modulefile",
+                subcommands: vec![cli::Command {
+                    name: "all",
+                    subcommands: Vec::new(),
+                    arguments: Vec::new(),
+                    help: "Write modulefiles for all available modules",
+                    callback: Some(callbacks::write_modulefile_all),
+                }],
+                arguments: vec![cli::Arg {
+                    name: "module",
+                    help: "Write a modulefile for the specified module",
+                    num_params: NumParams::Any,
+                    callback: callbacks::write_modulefile,
+                }],
+                help: "Automatically generate modulefiles",
                 callback: None,
             },
         ],

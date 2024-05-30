@@ -173,6 +173,10 @@ pub fn install_module(partials: &[&str], _config: &config::Config) -> Result<(),
     resolver_boilerplate(partials, module::install)
 }
 
+pub fn write_modulefile(partials: &[&str], _config: &config::Config) -> Result<(), String> {
+    resolver_boilerplate(partials, module::modulefile)
+}
+
 /// A callback function to install all available modules
 ///
 /// # Errors
@@ -181,6 +185,14 @@ pub fn install_module(partials: &[&str], _config: &config::Config) -> Result<(),
 pub fn install_all(_config: &config::Config) -> Result<(), String> {
     for m in &get_modules()? {
         module::install(m)?;
+    }
+
+    Ok(())
+}
+
+pub fn write_modulefile_all(_config: &config::Config) -> Result<(), String> {
+    for m in &get_modules()? {
+        module::modulefile(m)?;
     }
 
     Ok(())
