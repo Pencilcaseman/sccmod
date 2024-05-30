@@ -83,7 +83,7 @@ impl Module {
             }
         }
 
-        let build_path = self.build_path.clone() + &flavour_str;
+        let build_path = self.build_path.clone() + "sccmod_build" + &flavour_str;
         let install_path = self.install_path.clone() + &flavour_str;
 
         // let modules: Vec<String> = flavour
