@@ -417,6 +417,7 @@ pub fn build(module: &Module) -> Result<(), String> {
     let flavs = flavours::generate(module)?;
 
     for flav in &flavs {
+        log::info(&format!("Building flavour {}", flavours::gen_name(flav)));
         module.build((&flav.0, flav.1))?;
     }
 
@@ -435,6 +436,7 @@ pub fn install(module: &Module) -> Result<(), String> {
     let flavs = flavours::generate(module)?;
 
     for flav in &flavs {
+        log::info(&format!("Installing flavour {}", flavours::gen_name(flav)));
         module.install((&flav.0, flav.1))?;
     }
 

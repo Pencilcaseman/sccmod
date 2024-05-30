@@ -73,3 +73,12 @@ pub fn generate(module: &Module) -> Result<Vec<(Vec<Module>, usize)>, String> {
 
     Ok(permutations)
 }
+
+pub fn gen_name(flav: &(Vec<Module>, usize)) -> String {
+    let mut flav_str = "|".to_string();
+    for i in 0..flav.1 {
+        flav_str.push_str(&flav.0[i].mod_name());
+        flav_str.push_str("|")
+    }
+    flav_str
+}
