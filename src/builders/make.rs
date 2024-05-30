@@ -37,7 +37,7 @@ impl Make {
             shell.add_command(&format!("module load {dep}"));
         }
 
-        let mut configure_cmd = format!("{source_path:?}/configure --prefix={install_path:?}");
+        let mut configure_cmd = format!("{source_path:?}/configure");
 
         if let Some(flags) = &self.configure_flags {
             for flag in flags {
@@ -45,18 +45,10 @@ impl Make {
             }
         }
 
+        // Add this last so it overrides anything passed in `configure_flags`
+        configure_cmd.push_str(&format!("--prefix={install_path:?}"));
+
         shell.add_command(&configure_cmd);
-
-        // configure.stdout(std::process::Stdio::piped());
-        // configure.stderr(std::process::Stdio::piped());
-
-        // let spawn = configure.spawn().map_err(|e| e.to_string())?;
-        // let (result, stdout, stderr) = child_logger(spawn);
-
-        // if result.is_err() {
-        //     return Err("Failed to run ./configure".to_string());
-        // }
-        // let result = result.unwrap();
 
         let (result, stdout, stderr) = shell.exec();
         let result = result.map_err(|_| "Failed to run ./configure")?;
