@@ -67,6 +67,7 @@ impl Module {
     ///  - modules: module names necessary for installation
     pub fn parse(&self, flavour: &(&[Module], usize)) -> (String, String, String, Vec<String>) {
         // Generate extension to build path based on flavour
+        let conf = config::read().unwrap();
         let mut flavour_str = format!("{PATH_SEP}1{PATH_SEP}"); // '/1/' for revision
 
         // If no class modules are required, install into `default` flavour
@@ -85,10 +86,22 @@ impl Module {
         let build_path = self.build_path.clone() + &flavour_str;
         let install_path = self.install_path.clone() + &flavour_str;
 
+        // let modules: Vec<String> = flavour
+        //     .0
+        //     .iter()
+        //     .map(|flav| format!("{}/{}/{}", flav.class, flav.name, flav.version))
+        //     .collect();
+
+        // List of modulefiles
         let modules: Vec<String> = flavour
             .0
             .iter()
-            .map(|flav| format!("{}/{}/{}", flav.class, flav.name, flav.version))
+            .map(|flav| {
+                format!(
+                    "{}/{}/{}/{}",
+                    conf.modulefile_root, flav.class, flav.name, flav.version
+                )
+            })
             .collect();
 
         (flavour_str, build_path, install_path, modules)
@@ -96,6 +109,10 @@ impl Module {
 
     pub fn identifier(&self) -> String {
         format!("{}/{}/{}", self.class, self.name, self.version)
+    }
+
+    pub fn mod_name(&self) -> String {
+        format!("{}/{}", self.name, self.version)
     }
 
     /// Download the source code for the module, based on its [`Downloader`].

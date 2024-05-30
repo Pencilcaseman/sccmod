@@ -17,7 +17,7 @@ pub fn generate(module: &Module) -> Result<Vec<(Vec<Module>, usize)>, String> {
         .map(|name| {
             modules
                 .iter()
-                .find(|m| &m.identifier() == name)
+                .find(|m| (&m.identifier() == name) || (&m.mod_name() == name))
                 .ok_or(format!(
                     "Failed to find module matching dependency '{name}'"
                 ))

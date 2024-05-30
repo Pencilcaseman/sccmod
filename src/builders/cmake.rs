@@ -43,7 +43,6 @@ impl CMake {
 
         if let Some(flags) = &self.configure_flags {
             for flag in flags {
-                // cmake.arg(flag);
                 cmake_cmd.push_str(&format!(" {flag}"));
             }
         }
