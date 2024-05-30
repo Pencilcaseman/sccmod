@@ -19,7 +19,7 @@ pub fn resolver_boilerplate(
     match module_resolver::resolve(partials)? {
         module_resolver::ResolveMatch::Full(m) => func(&m),
         module_resolver::ResolveMatch::Partial(m) => {
-            let mut err = String::from("Multiple modules match the provided partials:\n");
+            let mut err = String::from("Multiple modules match the provided partial(s):\n");
 
             // Always valid, as `m.len()` >= 1, so `log(m.len())` >= 0
             #[allow(
@@ -28,6 +28,12 @@ pub fn resolver_boilerplate(
                 clippy::cast_precision_loss
             )]
             let max_digits = (m.len() as f64).log10() as usize;
+
+            err.push_str(&format!(
+                "{}     {}\n",
+                String::from(" ").repeat(max_digits),
+                "all".bold().magenta()
+            ));
 
             for (index, item) in m.iter().enumerate() {
                 // Always valid, as `item` >= 0, so `log(item + 1)` >= 0
@@ -58,18 +64,21 @@ pub fn resolver_boilerplate(
                 std::io::stdout().flush().map_err(|e| e.to_string())?;
 
                 match std::io::stdin().read_line(&mut selection) {
-                    Ok(_) => match selection.trim().parse::<usize>() {
-                        Ok(num) if num < m.len() => {
-                            valid = true;
-                            selection_index = num;
+                    Ok(_) if selection.trim() == "all" => valid = true,
+                    Ok(_) => {
+                        match selection.trim().parse::<usize>() {
+                            Ok(num) if num < m.len() => {
+                                valid = true;
+                                selection_index = num;
+                            }
+                            Ok(_) => {
+                                log::warn("Invalid index selected");
+                            }
+                            Err(_) => {
+                                log::warn("Invalid input received. Input must be a positive integer or 'all'");
+                            }
                         }
-                        Ok(_) => {
-                            log::warn("Invalid index selected");
-                        }
-                        Err(_) => {
-                            log::warn("Invalid input received. Input must be a positive integer");
-                        }
-                    },
+                    }
                     Err(_) => {
                         log::warn("Failed to read input");
                     }
