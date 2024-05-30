@@ -46,7 +46,7 @@ impl Make {
         }
 
         // Add this last so it overrides anything passed in `configure_flags`
-        configure_cmd.push_str(&format!("--prefix={install_path:?}"));
+        configure_cmd.push_str(&format!(" --prefix={install_path:?}"));
 
         shell.add_command(&configure_cmd);
 
