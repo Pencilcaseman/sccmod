@@ -14,8 +14,9 @@ use std::fs::DirEntry;
 
 #[derive(Debug, Clone)]
 pub enum Dependency {
-    Class(String),
-    Module(String),
+    Class(String),  // Flavours class
+    Module(String), // Module name
+    Deny(String),   // Prevent compiling with this module
 }
 
 #[derive(Debug, Clone)]
@@ -227,12 +228,6 @@ impl Module {
                 .ok_or("Metadata does not contain key 'class'")?
                 .to_owned();
 
-            // let downloader = Downloader::from_py(
-            //     &extract_object(object, "download")?
-            //         .call0()
-            //         .map_err(|err| format!("Failed to call `download` in module class: {err}"))?,
-            // )?;
-
             let downloader: Result<Option<Downloader>, String> = match object.getattr("download") {
                 Ok(download) => Ok(Some(Downloader::from_py(&download.call0().map_err(
                     |err| format!("Failed to call `download` in module class: {err}"),
@@ -254,6 +249,14 @@ impl Module {
                         match dep.getattr("name").map_err(|err| format!("Dependency is a Class instance, but does not contain a .name attribute: {err}"))?.extract::<String>() {
                             Ok(name) => {
                                 Ok(Dependency::Class(name))
+                            },
+                            Err(e) => Err(format!("Could not convert .name attribute to Rust String: {e}"))
+                        }
+                    },
+                    "<class 'sccmod.module.Deny'>" => {
+                        match dep.getattr("name").map_err(|err| format!("Dependency is a Deny instance, but does not contain a .name attribute: {err}"))?.extract::<String>() {
+                            Ok(name) => {
+                                Ok(Dependency::Deny(name))
                             },
                             Err(e) => Err(format!("Could not convert .name attribute to Rust String: {e}"))
                         }

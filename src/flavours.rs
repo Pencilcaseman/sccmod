@@ -36,6 +36,18 @@ pub fn generate(module: &Module) -> Result<Vec<(Vec<Module>, usize)>, String> {
         })
         .collect();
 
+    let deny_modules: Vec<String> = module
+        .dependencies
+        .iter()
+        .filter_map(|dep| {
+            if let Dependency::Deny(name) = dep {
+                Some(name.to_owned())
+            } else {
+                None
+            }
+        })
+        .collect();
+
     // 2. Extract modules with matching class
     let available_per_class: Vec<Vec<&Module>> = required_classes
         .iter()
@@ -59,7 +71,16 @@ pub fn generate(module: &Module) -> Result<Vec<(Vec<Module>, usize)>, String> {
 
         let permutation = (perm, required_classes.len());
 
-        permutations.push(permutation);
+        // If the permutation contains a denied module, do not include it
+        if !deny_modules.iter().any(|deny| {
+            permutation
+                .0
+                .iter()
+                .map(|m| m.mod_name())
+                .any(|name| &name == deny)
+        }) {
+            permutations.push(permutation);
+        }
 
         index[0] += 1;
 
