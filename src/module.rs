@@ -16,7 +16,7 @@ use std::fs::DirEntry;
 pub enum Dependency {
     Class(String),  // Flavours class
     Module(String), // Module name
-    Deny(String),   // Prevent compiling with this module
+    Deny(String),   // Prevent compiling with this flvaour (':' separated names)
 }
 
 #[derive(Debug, Clone)]
@@ -448,15 +448,15 @@ pub fn build(module: &Module) -> Result<(), String> {
 /// # Errors
 /// Errors if [`Module.download`], [`Module.build`] or [`Module.install`] fails.
 pub fn install(module: &Module) -> Result<(), String> {
-    build(module)?;
+    // build(module)?;
 
-    log::status(&format!("Installing '{}-{}'", module.name, module.version));
+    // log::status(&format!("Installing '{}-{}'", module.name, module.version));
 
     let flavs = flavours::generate(module)?;
 
     for flav in &flavs {
         log::info(&format!("Installing flavour {}", flavours::gen_name(flav)));
-        module.install((&flav.0, flav.1))?;
+        // module.install((&flav.0, flav.1))?;
     }
 
     module.modulefile()

@@ -36,12 +36,12 @@ pub fn generate(module: &Module) -> Result<Vec<(Vec<Module>, usize)>, String> {
         })
         .collect();
 
-    let deny_modules: Vec<String> = module
+    let deny_modules: Vec<Vec<String>> = module
         .dependencies
         .iter()
         .filter_map(|dep| {
             if let Dependency::Deny(name) = dep {
-                Some(name.to_owned())
+                Some(name.split(':').map(|s| s.to_string()).collect())
             } else {
                 None
             }
@@ -73,11 +73,19 @@ pub fn generate(module: &Module) -> Result<Vec<(Vec<Module>, usize)>, String> {
 
         // If the permutation contains a denied module, do not include it
         if !deny_modules.iter().any(|deny| {
-            permutation
-                .0
-                .iter()
-                .map(|m| m.mod_name())
-                .any(|name| &name == deny)
+            // permutation
+            //     .0
+            //     .iter()
+            //     .map(|m| m.mod_name())
+            //     .any(|name| &name == deny)
+
+            deny.iter().all(|deny_mod| {
+                permutation
+                    .0
+                    .iter()
+                    .map(|m| m.mod_name())
+                    .any(|mod_name| &mod_name == deny_mod)
+            })
         }) {
             permutations.push(permutation);
         }
