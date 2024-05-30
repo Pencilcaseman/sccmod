@@ -56,15 +56,16 @@ pub fn resolver_boilerplate(
             log::warn(&err);
 
             let mut valid = false;
+            let mut all = false;
             let mut selection = String::new();
             let mut selection_index = 0;
 
-            while !valid {
+            while !valid && !all {
                 print!("{}", "Please enter a selection: ".yellow().bold());
                 std::io::stdout().flush().map_err(|e| e.to_string())?;
 
                 match std::io::stdin().read_line(&mut selection) {
-                    Ok(_) if selection.trim() == "all" => valid = true,
+                    Ok(_) if selection.trim() == "all" => all = true,
                     Ok(_) => {
                         match selection.trim().parse::<usize>() {
                             Ok(num) if num < m.len() => {
@@ -87,7 +88,15 @@ pub fn resolver_boilerplate(
                 selection.clear(); // Clear the input buffer for the next iteration
             }
 
-            func(&m[selection_index])
+            if all {
+                for module in &m {
+                    func(module)?;
+                }
+
+                Ok(())
+            } else {
+                func(&m[selection_index])
+            }
         }
         module_resolver::ResolveMatch::None => {
             log::error("No modules match the partials provided");
