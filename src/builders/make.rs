@@ -143,7 +143,7 @@ impl BuilderImpl for Make {
         _: &P0,
         build_path: &P1, // Build path is the source path
         install_path: &P2,
-        _: &[String], // Dependencies are not necessary for installing
+        dependencies: &[String],
     ) -> Result<(), String> {
         let build_path = path::absolute(build_path).map_err(|err| err.to_string())?;
         let install_path = path::absolute(install_path).map_err(|err| err.to_string())?;
@@ -154,15 +154,16 @@ impl BuilderImpl for Make {
             return Err(format!("Source directory {build_path:?} does not exist"));
         }
 
-        let mut make = Command::new("make");
-        make.current_dir(build_path);
-        make.arg("install");
+        let mut shell = Shell::default();
+        shell.set_current_dir(&build_path.to_str().unwrap());
 
-        make.stdout(std::process::Stdio::piped());
-        make.stderr(std::process::Stdio::piped());
-        let spawn = make.spawn().map_err(|e| e.to_string())?;
+        for dep in dependencies {
+            shell.add_command(&format!("module load {dep}"));
+        }
 
-        let (result, stdout, stderr) = child_logger(spawn);
+        shell.add_command("make install");
+
+        let (result, stdout, stderr) = shell.exec();
 
         if result.is_err() {
             return Err("Failed to run make install".to_string());
@@ -171,7 +172,7 @@ impl BuilderImpl for Make {
 
         if !result.success() {
             return Err(format!(
-                "Failed to execute {make:?}. Output:\n{}\n{}",
+                "Failed to execute make install. Output:\n{}\n{}",
                 stdout.join("\n"),
                 stderr.join("\n")
             ));
