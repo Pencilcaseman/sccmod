@@ -90,21 +90,18 @@ impl Module {
         let build_path = self.build_path.clone() + &flavour_str;
         let install_path = self.install_path.clone() + &flavour_str;
 
-        // let modules: Vec<String> = flavour
-        //     .0
-        //     .iter()
-        //     .map(|flav| format!("{}/{}/{}", flav.class, flav.name, flav.version))
-        //     .collect();
-
         // List of modulefiles
         let modules: Vec<String> = flavour
             .0
             .iter()
             .map(|flav| {
-                format!(
-                    "{}/{}/{}/{}",
-                    conf.modulefile_root, flav.class, flav.name, flav.version
-                )
+                // format!(
+                //     "{}/{}/{}/{}",
+                //     conf.modulefile_root, flav.class, flav.name, flav.version
+                // )
+
+                // Flavours only works with the module name itself
+                flav.mod_name()
             })
             .collect();
 
