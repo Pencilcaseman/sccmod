@@ -197,6 +197,11 @@ impl Module {
                 log::status(&"Running post-install commands");
                 let mut shell = Shell::default();
                 shell.set_current_dir(&install_path);
+
+                for module in &modules {
+                    shell.add_command(&format!("module load {}", module));
+                }
+
                 for cmd in commands {
                     shell.add_command(&cmd);
                 }
