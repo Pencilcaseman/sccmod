@@ -49,6 +49,9 @@ pub struct Module {
     /// A list of commands to run before building
     pub pre_build: Option<Vec<String>>,
 
+    /// A list of commands to run after installing
+    pub post_install: Option<Vec<String>>,
+
     /// Downloader to download the source code
     pub downloader: Option<Downloader>,
 
@@ -188,7 +191,32 @@ impl Module {
         if let Some(builder) = &self.builder {
             let (_, build_path, install_path, modules) = self.parse(&flavour);
 
-            builder.install(&self.source_path, &build_path, &install_path, &modules)
+            builder.install(&self.source_path, &build_path, &install_path, &modules)?;
+
+            if let Some(commands) = &self.post_install {
+                log::status(&"Running post-install commands");
+                let mut shell = Shell::default();
+                shell.set_current_dir(&install_path);
+                for cmd in commands {
+                    shell.add_command(&cmd);
+                }
+
+                let (result, stdout, stderr) = shell.exec();
+
+                let result = result.map_err(|_| "Failed to run post-install commands")?;
+
+                if !result.success() {
+                    return Err(format!(
+                        "Failed to execute command. Output:\n{}\n{}",
+                        stdout.join("\n"),
+                        stderr.join("\n")
+                    ));
+                }
+
+                log::status(&"Building...");
+            }
+
+            Ok(())
         } else {
             log::warn(&format!(
                 "Module '{}' does not have a Builder",
@@ -287,12 +315,6 @@ impl Module {
                 })
                 .collect::<Result<Vec<(String, Environment)>, String>>()?;
 
-            // let builder = Builder::from_py(
-            //     &extract_object(object, "build")?
-            //         .call0()
-            //         .map_err(|err| format!("Failed to call `build` in module class: {err}"))?,
-            // )?;
-
             let builder: Result<Option<Builder>, String> = match object.getattr("build") {
                 Ok(download) => Ok(Some(Builder::from_py(&download.call0().map_err(
                     |err| format!("Failed to call `build` in module class: {err}"),
@@ -306,6 +328,20 @@ impl Module {
                     obj.call0()
                         .map_err(|err| {
                             format!("Failed to call 'pre_build()` in module class: {err}")
+                        })?
+                        .extract()
+                        .map_err(|err| {
+                            format!("Failed to convert object to Rust Vec<String>: {err}")
+                        })?,
+                ),
+                Err(_) => None,
+            };
+
+            let post_install: Option<Vec<String>> = match extract_object(object, "post_install") {
+                Ok(obj) => Some(
+                    obj.call0()
+                        .map_err(|err| {
+                            format!("Failed to call 'post_install()` in module class: {err}")
                         })?
                         .extract()
                         .map_err(|err| {
@@ -335,6 +371,7 @@ impl Module {
                 environment,
                 metadata,
                 pre_build,
+                post_install,
                 downloader,
                 builder,
                 source_path,
