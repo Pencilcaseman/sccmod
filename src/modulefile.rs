@@ -46,7 +46,6 @@ pub fn generate(module: &Module) -> String {
 
     format!(
         r#"#%Module
-# Flavours initialisation
 package require flavours
 flavours init
 
