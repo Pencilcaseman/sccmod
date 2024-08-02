@@ -3,3 +3,5 @@ example_out/
 .idea/
 .DS_Store
 *.pyc
+debug.log
+out.txt

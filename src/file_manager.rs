@@ -69,7 +69,8 @@ pub fn dir_level<P: AsRef<Path>>(path: &P) -> isize {
 }
 
 pub fn absolute_path<P: AsRef<Path>>(path: &P) -> Option<PathBuf> {
-    if std::fs::try_exists(path).ok()? {
+    // if std::fs::try_exists(path).ok()? {
+    if std::fs::exists(path).ok()? {
         let mut command = Command::new("pwd");
         command.current_dir(path);
 

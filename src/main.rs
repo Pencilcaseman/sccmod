@@ -2,18 +2,7 @@ use sccmod::{callbacks, cli, cli::NumParams, config};
 
 #[allow(clippy::cognitive_complexity)]
 fn main() -> Result<(), String> {
-    // let mut shell = sccmod::shell::Shell::new("fish");
-    // shell.set_current_dir("/Users/tobydavis/apps/module_build/gcc");
-    // shell.add_command("contrib/download_prerequisites");
-
-    // println!("{:?}", shell.exec());
-
     let config = config::read()?;
-
-    // println!("Module Paths: {:?}", config.module_paths);
-    // println!("Build Root: {}", config.build_root);
-    // println!("Install Root: {}", config.install_root);
-
     cli(&config)
 }
 

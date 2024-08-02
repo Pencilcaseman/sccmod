@@ -115,7 +115,9 @@ impl DownloaderImpl for GitClone {
     fn download<P: AsRef<Path>>(&self, path: &P) -> Result<(), String> {
         // Check if the directory already exists
 
-        let skip_clone = std::fs::try_exists(path).map_err(|err| err.to_string())?;
+        // let skip_clone = std::fs::try_exists(path).map_err(|err| err.to_string())?;
+
+        let skip_clone = std::fs::exists(path).map_err(|err| err.to_string())?;
 
         if skip_clone {
             crate::log::warn("Module download directory already exists. Pulling latest changes");
@@ -216,27 +218,56 @@ impl DownloaderImpl for GitClone {
                 }
             }
 
-            for file in &file_manager::recursive_list_dir(&format!(
+            let files = file_manager::recursive_list_dir(&format!(
                 "{}/sccmod_patches",
                 path.as_ref().to_str().unwrap()
-            ))
-            .unwrap()
-            {
-                log::info(&format!("Applying patch: {:?}", file.file_name()));
+            ));
 
-                let mut shell = Shell::default();
-                shell.set_current_dir(path);
-                shell.add_command(&format!(
-                    "git apply --reject --whitespace=fix sccmod_patches/{:?}",
-                    file.file_name()
-                ));
+            match files {
+                Some(files) => {
+                    for file in &files {
+                        log::info(&format!("Applying patch: {:?}", file.file_name()));
 
-                let (result, _, _) = shell.exec();
+                        let mut shell = Shell::default();
+                        shell.set_current_dir(path);
+                        shell.add_command(&format!(
+                            "git apply --reject --whitespace=fix sccmod_patches/{:?}",
+                            file.file_name()
+                        ));
 
-                if result.is_err() || !result.unwrap().success() {
-                    log::warn("Errors when applying patch. Proceed with caution.");
+                        let (result, _, _) = shell.exec();
+
+                        if result.is_err() || !result.unwrap().success() {
+                            log::warn("Errors when applying patch. Proceed with caution.");
+                        }
+                    }
+                }
+                None => {
+                    log::warn("No patches found");
                 }
             }
+
+            // for file in &file_manager::recursive_list_dir(&format!(
+            //     "{}/sccmod_patches",
+            //     path.as_ref().to_str().unwrap()
+            // ))
+            // .unwrap()
+            // {
+            //     log::info(&format!("Applying patch: {:?}", file.file_name()));
+            //
+            //     let mut shell = Shell::default();
+            //     shell.set_current_dir(path);
+            //     shell.add_command(&format!(
+            //         "git apply --reject --whitespace=fix sccmod_patches/{:?}",
+            //         file.file_name()
+            //     ));
+            //
+            //     let (result, _, _) = shell.exec();
+            //
+            //     if result.is_err() || !result.unwrap().success() {
+            //         log::warn("Errors when applying patch. Proceed with caution.");
+            //     }
+            // }
         }
 
         Ok(())
