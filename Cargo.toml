@@ -9,7 +9,7 @@ repository = "https://github.com/Pencilcaseman/sccmod"
 documentation = "https://docs.rs/sccmod"
 
 description = "A mediocre module manager for handling multiple versions of self-compiled modules"
-keywords = ["package-manager", "version-system", "builder"]
+keywords = ["version-system", "builder"]
 categories = ["package-manager"]
 
 [dependencies]
