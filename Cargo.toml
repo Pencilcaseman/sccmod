@@ -1,7 +1,7 @@
 [package]
 name = "sccmod"
 authors = ["Toby Davis \"Pencilcaseman\""]
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
@@ -9,8 +9,8 @@ repository = "https://github.com/Pencilcaseman/sccmod"
 documentation = "https://docs.rs/sccmod"
 
 description = "A mediocre module manager for handling multiple versions of self-compiled modules"
-keywords = ["version-system", "builder"]
-categories = ["package-manager"]
+keywords = ["package-manager", "version-system", "builder"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 anstyle = "1.0.6"
