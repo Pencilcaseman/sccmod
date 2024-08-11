@@ -18,7 +18,7 @@ pub fn load_program<'a, P: AsRef<Path> + std::fmt::Debug>(
     let code = format!("import sys\nsys.path.append('{source_dir}')\n{file}");
 
     PyModule::from_code_bound(*py, &code, "", "")
-        .map_err(|err| format!("Failed to load python program: {err}"))
+        .map_err(|err| format!("Failed to load python program '{path:?}': {err}"))
 }
 
 /// Extract a named attribute of a Python object.
