@@ -205,7 +205,7 @@ impl DownloaderImpl for GitClone {
                 shell.set_current_dir(path);
                 shell.add_command("mkdir -p sccmod_patches");
                 shell.add_command("cd sccmod_patches");
-                shell.add_command(&format!("curl -O {patch}"));
+                shell.add_command(&format!("curl -OL {patch}"));
 
                 let (result, stdout, stderr) = shell.exec();
 
@@ -322,7 +322,7 @@ impl DownloaderImpl for Curl {
 
         let mut command = Command::new("curl");
         command.current_dir(path.as_ref());
-        command.arg("-o");
+        command.arg("-OL");
         command.arg(FILE_NAME);
         command.arg(&self.url);
 
