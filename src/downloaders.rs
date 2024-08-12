@@ -1,6 +1,8 @@
-use crate::{archive, file_manager, log, shell::Shell};
-use pyo3::prelude::*;
 use std::{fs, path::Path, process::Command};
+
+use pyo3::prelude::*;
+
+use crate::{archive, file_manager, log, shell::Shell};
 
 const FILE_NAME: &str = "curl_download_result";
 
@@ -90,26 +92,23 @@ impl DownloaderImpl for GitClone {
         };
 
         let shallow: bool = match object.getattr("shallow") {
-            Ok(x) => x
-                .extract()
-                .map_err(|_| "Failed to convert attribute 'shallow' to Rust bool")?,
+            Ok(x) => x.extract().map_err(|_| {
+                "Failed to convert attribute 'shallow' to Rust bool"
+            })?,
             Err(_) => false,
         };
 
         let patches: Option<Vec<String>> = object
             .getattr("patches")
-            .map_err(|_| "Failed to read attribute 'patches' of Builder object")?
+            .map_err(|_| {
+                "Failed to read attribute 'patches' of Builder object"
+            })?
             .extract()
-            .map_err(|_| "Failed to convert attribute 'patches' to Rust Vec<String>")?;
+            .map_err(|_| {
+                "Failed to convert attribute 'patches' to Rust Vec<String>"
+            })?;
 
-        Ok(Self {
-            url,
-            branch,
-            commit,
-            submodules,
-            shallow,
-            patches,
-        })
+        Ok(Self { url, branch, commit, submodules, shallow, patches })
     }
 
     fn download<P: AsRef<Path>>(&self, path: &P) -> Result<(), String> {
@@ -117,7 +116,8 @@ impl DownloaderImpl for GitClone {
 
         // let skip_clone = std::fs::try_exists(path).map_err(|err| err.to_string())?;
 
-        let skip_clone = std::fs::exists(path).map_err(|err| err.to_string())?;
+        let skip_clone =
+            std::fs::exists(path).map_err(|err| err.to_string())?;
 
         if skip_clone {
             crate::log::warn("Module download directory already exists. Pulling latest changes");
@@ -226,7 +226,10 @@ impl DownloaderImpl for GitClone {
             match files {
                 Some(files) => {
                     for file in &files {
-                        log::info(&format!("Applying patch: {:?}", file.file_name()));
+                        log::info(&format!(
+                            "Applying patch: {:?}",
+                            file.file_name()
+                        ));
 
                         let mut shell = Shell::default();
                         shell.set_current_dir(path);
@@ -277,11 +280,7 @@ impl DownloaderImpl for GitClone {
 impl Curl {
     #[must_use]
     pub fn new(url: &str) -> Self {
-        Self {
-            url: url.to_string(),
-            sha256: None,
-            archive: None,
-        }
+        Self { url: url.to_string(), sha256: None, archive: None }
     }
 }
 
@@ -294,24 +293,20 @@ impl DownloaderImpl for Curl {
             .map_err(|_| "Could not convert attribute 'url' to Rust String")?;
 
         let sha256: Option<String> = match object.getattr("sha256") {
-            Ok(x) => x
-                .extract()
-                .map_err(|_| "Could not convert attribute 'sha256' to Rust String")?,
+            Ok(x) => x.extract().map_err(|_| {
+                "Could not convert attribute 'sha256' to Rust String"
+            })?,
             Err(_) => None,
         };
 
         let archive: Option<String> = match object.getattr("archive") {
-            Ok(x) => x
-                .extract()
-                .map_err(|_| "Could not convert attribute 'archive' to Rust String")?,
+            Ok(x) => x.extract().map_err(|_| {
+                "Could not convert attribute 'archive' to Rust String"
+            })?,
             Err(_) => None,
         };
 
-        Ok(Self {
-            url,
-            sha256,
-            archive,
-        })
+        Ok(Self { url, sha256, archive })
     }
 
     fn download<P: AsRef<Path>>(&self, path: &P) -> Result<(), String> {

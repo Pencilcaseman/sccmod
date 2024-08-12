@@ -1,22 +1,27 @@
+use std::{collections::HashMap, fs::DirEntry};
+
+use pyo3::prelude::*;
+
 use crate::{
     builders::builder_trait::{Builder, BuilderImpl},
     config,
-    downloaders::{self, Downloader, DownloaderImpl},
+    downloaders::{Downloader, DownloaderImpl},
     file_manager::{recursive_list_dir, PATH_SEP},
     flavours, log, modulefile,
+    python_interop::{extract_object, load_program},
     shell::Shell,
 };
 
-use crate::python_interop::{extract_object, load_program};
-use pyo3::prelude::*;
-use std::collections::HashMap;
-use std::fs::DirEntry;
+pub fn get_submodule_path(parent: &str, submodule: &str) -> String {
+    format!("{parent}/sccmod_submodules/{submodule}")
+}
 
 #[derive(Debug, Clone)]
 pub enum Dependency {
-    Class(String),  // Flavours class
-    Module(String), // Module name
-    Deny(String),   // Prevent compiling with this flvaour (':' separated names)
+    Class(String),   // Flavours class
+    Module(String),  // Module name
+    Depends(String), // Dependent module name
+    Deny(String),    // Prevent compiling with this flvaour
 }
 
 #[derive(Debug, Clone)]
@@ -69,9 +74,11 @@ impl Module {
     ///  - build_path: updated build path
     ///  - install_path: updated install path
     ///  - modules: module names necessary for installation
-    pub fn parse(&self, flavour: &(&[Module], usize)) -> (String, String, String, Vec<String>) {
+    pub fn parse(
+        &self,
+        flavour: &(&[Module], usize),
+    ) -> (String, String, String, Vec<String>) {
         // Generate extension to build path based on flavour
-        let conf = config::read().unwrap();
         let mut flavour_str = format!("{PATH_SEP}1{PATH_SEP}"); // '/1/' for revision
 
         // If no class modules are required, install into `default` flavour
@@ -79,7 +86,8 @@ impl Module {
             flavour_str.push_str(&format!("default"))
         } else {
             for (i, flav) in (0..flavour.1).zip(flavour.0.iter()) {
-                flavour_str.push_str(&format!("{}-{}", &flav.name, &flav.version));
+                flavour_str
+                    .push_str(&format!("{}-{}", &flav.name, &flav.version));
 
                 if i + 1 < flavour.1 {
                     flavour_str.push('-');
@@ -91,19 +99,8 @@ impl Module {
         let install_path = self.install_path.clone() + &flavour_str;
 
         // List of modulefiles
-        let modules: Vec<String> = flavour
-            .0
-            .iter()
-            .map(|flav| {
-                // format!(
-                //     "{}/{}/{}/{}",
-                //     conf.modulefile_root, flav.class, flav.name, flav.version
-                // )
-
-                // Flavours only works with the module name itself
-                flav.mod_name()
-            })
-            .collect();
+        let modules: Vec<String> =
+            flavour.0.iter().map(|flav| flav.mod_name()).collect();
 
         (flavour_str, build_path, install_path, modules)
     }
@@ -141,20 +138,21 @@ impl Module {
     /// either an error message or the output of the errored command.
     pub fn build(
         &self,
-        flavour: (&[Module], usize), // ([dep0, dep1, ..., depN], num_flavour)
+        flavour: (&[Self], usize), // ([dep0, dep1, ..., depN], num_flavour)
     ) -> Result<(), String> {
         if let Some(builder) = &self.builder {
             if let Some(commands) = &self.pre_build {
-                log::status(&"Running pre-build commands");
+                log::status("Running pre-build commands");
                 let mut shell = Shell::default();
                 shell.set_current_dir(&self.source_path);
                 for cmd in commands {
-                    shell.add_command(&cmd);
+                    shell.add_command(cmd);
                 }
 
                 let (result, stdout, stderr) = shell.exec();
 
-                let result = result.map_err(|_| "Failed to run CMake command")?;
+                let result =
+                    result.map_err(|_| "Failed to run CMake command")?;
 
                 if !result.success() {
                     return Err(format!(
@@ -164,12 +162,17 @@ impl Module {
                     ));
                 }
 
-                log::status(&"Building...");
+                log::status("Building...");
             }
 
             let (_, build_path, install_path, modules) = self.parse(&flavour);
 
-            builder.build(&self.source_path, &build_path, &install_path, &modules)
+            builder.build(
+                &self.source_path,
+                &build_path,
+                &install_path,
+                &modules,
+            )
         } else {
             log::warn(&format!(
                 "Module '{}' does not have a Builder",
@@ -188,7 +191,12 @@ impl Module {
         if let Some(builder) = &self.builder {
             let (_, build_path, install_path, modules) = self.parse(&flavour);
 
-            builder.install(&self.source_path, &build_path, &install_path, &modules)?;
+            builder.install(
+                &self.source_path,
+                &build_path,
+                &install_path,
+                &modules,
+            )?;
 
             if let Some(commands) = &self.post_install {
                 log::status(&"Running post-install commands");
@@ -205,7 +213,8 @@ impl Module {
 
                 let (result, stdout, stderr) = shell.exec();
 
-                let result = result.map_err(|_| "Failed to run post-install commands")?;
+                let result = result
+                    .map_err(|_| "Failed to run post-install commands")?;
 
                 if !result.success() {
                     return Err(format!(
@@ -233,15 +242,21 @@ impl Module {
     /// # Errors
     /// This method will return [`Err(msg)`] if the object cannot be parsed
     /// successfully. `msg` is a string and contains the error message.
-    pub fn from_object(object: &Bound<PyAny>, config: &config::Config) -> Result<Self, String> {
+    pub fn from_object(
+        object: &Bound<PyAny>,
+        config: &config::Config,
+    ) -> Result<Self, String> {
         Python::with_gil(|_| {
-            let metadata: HashMap<String, String> = extract_object(object, "metadata")?
-                .call0()
-                .map_err(|err| format!("Failed to call `metadata`: {err}"))?
-                .extract()
-                .map_err(|err| {
-                    format!("Failed to convert metadata output to Rust HashMap: {err}")
-                })?;
+            let metadata: HashMap<String, String> =
+                extract_object(object, "metadata")?
+                    .call0()
+                    .map_err(|err| format!("Failed to call `metadata`: {err}"))?
+                    .extract()
+                    .map_err(|err| {
+                        format!(
+                    "Failed to convert metadata output to Rust HashMap: {err}"
+                )
+                    })?;
 
             let name = metadata
                 .get("name")
@@ -258,22 +273,34 @@ impl Module {
                 .ok_or("Metadata does not contain key 'class'")?
                 .to_owned();
 
-            let downloader: Result<Option<Downloader>, String> = match object.getattr("download") {
-                Ok(download) => Ok(Some(Downloader::from_py(&download.call0().map_err(
-                    |err| format!("Failed to call `download` in module class: {err}"),
-                )?)?)),
-                Err(_) => Ok(None),
-            };
+            let downloader: Result<Option<Downloader>, String> =
+                match object.getattr("download") {
+                    Ok(download) => Ok(Some(Downloader::from_py(
+                        &download.call0().map_err(|err| {
+                            format!(
+                            "Failed to call `download` in module class: {err}"
+                        )
+                        })?,
+                    )?)),
+                    Err(_) => Ok(None),
+                };
             let downloader = downloader?;
 
-            let dependencies: Vec<&PyAny> = extract_object(object, "dependencies")?
-                .call0()
-                .map_err(|err| format!("Failed to call `build_requirements`: {err}"))?
-                .extract()
-                .map_err(|err| format!("Failed to convert `dependencies()` to Rust Vec: {err}"))?;
+            let dependencies: Vec<&PyAny> = extract_object(
+                object,
+                "dependencies",
+            )?
+            .call0()
+            .map_err(|err| {
+                format!("Failed to call `build_requirements`: {err}")
+            })?
+            .extract()
+            .map_err(|err| {
+                format!("Failed to convert `dependencies()` to Rust Vec: {err}")
+            })?;
 
             // Convert dependencies into a Rust vector
-            let dependencies: Vec<Dependency> = dependencies.iter().map(|dep| {
+            let mut dependencies: Vec<Dependency> = dependencies.iter().map(|dep| {
                 match dep.get_type().to_string().as_ref() {
                     "<class 'sccmod.module.Class'>" => {
                         match dep.getattr("name").map_err(|err| format!("Dependency is a Class instance, but does not contain a .name attribute: {err}"))?.extract::<String>() {
@@ -287,6 +314,14 @@ impl Module {
                         match dep.getattr("name").map_err(|err| format!("Dependency is a Deny instance, but does not contain a .name attribute: {err}"))?.extract::<String>() {
                             Ok(name) => {
                                 Ok(Dependency::Deny(name))
+                            },
+                            Err(e) => Err(format!("Could not convert .name attribute to Rust String: {e}"))
+                        }
+                    },
+                    "<class 'sccmod.module.Depends'>" => {
+                        match dep.getattr("name").map_err(|err| format!("Dependency is a Depends instance, but does not contain a .name attribute: {err}"))?.extract::<String>() {
+                            Ok(name) => {
+                                Ok(Dependency::Depends(name))
                             },
                             Err(e) => Err(format!("Could not convert .name attribute to Rust String: {e}"))
                         }
@@ -313,14 +348,20 @@ impl Module {
                     "set" => Ok((name, Environment::Set(value))),
                     "append" => Ok((name, Environment::Append(value))),
                     "prepend" => Ok((name, Environment::Prepend(value))),
-                    other => Err(format!("Invalid environment variable operation '{other}'")),
+                    other => Err(format!(
+                        "Invalid environment variable operation '{other}'"
+                    )),
                 })
                 .collect::<Result<Vec<(String, Environment)>, String>>()?;
 
-            let builder: Result<Option<Builder>, String> = match object.getattr("build") {
-                Ok(download) => Ok(Some(Builder::from_py(&download.call0().map_err(
-                    |err| format!("Failed to call `build` in module class: {err}"),
-                )?)?)),
+            let builder: Result<Option<Builder>, String> = match object
+                .getattr("build")
+            {
+                Ok(download) => Ok(Some(Builder::from_py(
+                    &download.call0().map_err(|err| {
+                        format!("Failed to call `build` in module class: {err}")
+                    })?,
+                )?)),
                 Err(_) => Ok(None),
             };
             let builder = builder?;
@@ -396,7 +437,8 @@ impl Module {
         let content = modulefile::generate(&self);
 
         std::fs::create_dir_all(dir.parent().unwrap()).unwrap();
-        std::fs::write(dir, content).map_err(|err| format!("Failed to write modulefile: {err}"))
+        std::fs::write(dir, content)
+            .map_err(|err| format!("Failed to write modulefile: {err}"))
     }
 }
 

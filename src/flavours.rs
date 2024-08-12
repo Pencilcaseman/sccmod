@@ -1,26 +1,41 @@
 use crate::module::{get_modules, Dependency, Module};
 
 pub fn generate(module: &Module) -> Result<Vec<(Vec<Module>, usize)>, String> {
+    println!("{module:?}");
+
     let modules = get_modules()?;
+
+    for module in &modules {
+        println!("{} => {}", module.identifier(), module.mod_name());
+    }
 
     // 1. Extract dependent modules and classes
     let required_modules: Vec<&Module> = module
         .dependencies
         .iter()
         .filter_map(|dep| {
-            if let Dependency::Module(name) = dep {
-                Some(name)
-            } else {
-                None
+            // if let Dependency::Module(name) = dep {
+            //     Some(name)
+            // } else {
+            //     None
+            // }
+
+            match dep {
+                Dependency::Module(name) | Dependency::Depends(name) => {
+                    Some(name)
+                }
+                _ => None,
             }
         })
         .map(|name| {
             modules
                 .iter()
                 .find(|m| (&m.identifier() == name) || (&m.mod_name() == name))
-                .ok_or(format!(
-                    "Failed to find module matching dependency '{name}'"
-                ))
+                .ok_or_else(|| {
+                    format!(
+                        "Failed to find module matching dependency '{name}'"
+                    )
+                })
         })
         .collect::<Result<Vec<&Module>, String>>()?;
 
@@ -63,13 +78,16 @@ pub fn generate(module: &Module) -> Result<Vec<(Vec<Module>, usize)>, String> {
     while index[end] == 0 {
         let mut perm: Vec<Module> = (0..end)
             .zip(index.iter().enumerate())
-            .map(|(_, (class, &idx))| available_per_class[class][idx].to_owned())
+            .map(|(_, (class, &idx))| {
+                available_per_class[class][idx].to_owned()
+            })
             .collect();
 
-        // Add pre-defined modules
+        // Add pre-defined modules and submodules
         perm.extend(required_modules.iter().map(|&m| m.to_owned()));
 
         let permutation = (perm, required_classes.len());
+        // (perm, required_classes.len() + module.submodules.len());
 
         // If the permutation contains a denied module, do not include it
         if !deny_modules.iter().any(|deny| {

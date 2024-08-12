@@ -1,7 +1,9 @@
-use std::io;
-use std::io::{BufRead, ErrorKind};
-use std::process::ExitStatus;
-use std::thread;
+use std::{
+    io,
+    io::{BufRead, ErrorKind},
+    process::ExitStatus,
+    thread,
+};
 
 use anstyle::AnsiColor;
 use clap::builder::styling::Styles;
@@ -41,7 +43,8 @@ pub fn child_logger(
     let stdout_reader = io::BufReader::new(stdout);
     let stderr_reader = io::BufReader::new(stderr);
 
-    let console_width = crossterm::terminal::size().unwrap_or((24_u16, 80_u16)).0 as usize;
+    let console_width =
+        crossterm::terminal::size().unwrap_or((24_u16, 80_u16)).0 as usize;
 
     let stdout_lines = stdout_reader.lines().map_while(Result::ok);
     let stderr_lines = stderr_reader.lines().map_while(Result::ok);
@@ -49,12 +52,12 @@ pub fn child_logger(
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
 
-    let stdout_thread = thread::Builder::new()
-        .name("STDOUT".to_string())
-        .spawn(move || {
+    let stdout_thread =
+        thread::Builder::new().name("STDOUT".to_string()).spawn(move || {
             for mut line in stdout_lines {
                 stdout.push(line.clone());
-                let trunc = line.floor_char_boundary(console_width.max(13) - 13);
+                let trunc =
+                    line.floor_char_boundary(console_width.max(13) - 13);
                 line.truncate(trunc);
                 log::info_carriage(&line);
             }
@@ -67,12 +70,12 @@ pub fn child_logger(
     }
     let stdout_thread = stdout_thread.unwrap();
 
-    let stderr_thread = thread::Builder::new()
-        .name("STDERR".to_string())
-        .spawn(move || {
+    let stderr_thread =
+        thread::Builder::new().name("STDERR".to_string()).spawn(move || {
             for mut line in stderr_lines {
                 stderr.push(line.clone());
-                let trunc = line.floor_char_boundary(console_width.max(13) - 13);
+                let trunc =
+                    line.floor_char_boundary(console_width.max(13) - 13);
                 line.truncate(trunc);
                 log::warn_carriage(&line);
             }
@@ -109,12 +112,18 @@ pub trait CommandBuilder {
     fn add_subcommand(self, cmd: clap::Command) -> Self;
 
     #[must_use]
-    fn add_argument(self, name: &'static str, help: &'static str, num_params: &NumParams) -> Self;
+    fn add_argument(
+        self,
+        name: &'static str,
+        help: &'static str,
+        num_params: &NumParams,
+    ) -> Self;
 }
 
 #[must_use]
 pub fn command_group(id: &'static str, multiple: bool) -> clap::Command {
-    clap::Command::new("sccmod").group(clap::ArgGroup::new(id).multiple(multiple))
+    clap::Command::new("sccmod")
+        .group(clap::ArgGroup::new(id).multiple(multiple))
 }
 
 impl CommandBuilder for clap::Command {
@@ -122,7 +131,12 @@ impl CommandBuilder for clap::Command {
         self.subcommand(cmd)
     }
 
-    fn add_argument(self, name: &'static str, help: &'static str, num_params: &NumParams) -> Self {
+    fn add_argument(
+        self,
+        name: &'static str,
+        help: &'static str,
+        num_params: &NumParams,
+    ) -> Self {
         self.arg(
             clap::Arg::new(name)
                 .help(help)
@@ -206,7 +220,8 @@ impl Command {
             // }
 
             if let Some(values) = matches.get_many::<String>(arg.name) {
-                let values: Vec<&str> = values.map(std::string::String::as_str).collect();
+                let values: Vec<&str> =
+                    values.map(std::string::String::as_str).collect();
                 (arg.callback)(&values, config)?;
                 arg_count += 1;
 

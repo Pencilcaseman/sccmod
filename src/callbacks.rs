@@ -1,10 +1,12 @@
+use std::io::Write;
+
+use colored::Colorize;
+
 use crate::{
     config, log,
     module::{self, get_modules, Module},
     module_resolver,
 };
-use colored::Colorize;
-use std::io::Write;
 
 /// Internal boilerplate handler which, given a set of partials and a function,
 /// finds the specified module and passes it to the function.
@@ -19,7 +21,9 @@ pub fn resolver_boilerplate(
     match module_resolver::resolve(partials)? {
         module_resolver::ResolveMatch::Full(m) => func(&m),
         module_resolver::ResolveMatch::Partial(m) => {
-            let mut err = String::from("Multiple modules match the provided partial(s):\n");
+            let mut err = String::from(
+                "Multiple modules match the provided partial(s):\n",
+            );
 
             // Always valid, as `m.len()` >= 1, so `log(m.len())` >= 0
             #[allow(
@@ -44,7 +48,8 @@ pub fn resolver_boilerplate(
                 )]
                 let digits = (index as f64 + 0.05).log10() as usize;
 
-                let mut index_str = String::from(" ").repeat(max_digits - digits);
+                let mut index_str =
+                    String::from(" ").repeat(max_digits - digits);
                 index_str.push_str(&format!("{index}"));
 
                 err.push_str(&format!(
@@ -66,20 +71,18 @@ pub fn resolver_boilerplate(
 
                 match std::io::stdin().read_line(&mut selection) {
                     Ok(_) if selection.trim() == "all" => all = true,
-                    Ok(_) => {
-                        match selection.trim().parse::<usize>() {
-                            Ok(num) if num < m.len() => {
-                                valid = true;
-                                selection_index = num;
-                            }
-                            Ok(_) => {
-                                log::warn("Invalid index selected");
-                            }
-                            Err(_) => {
-                                log::warn("Invalid input received. Input must be a positive integer or 'all'");
-                            }
+                    Ok(_) => match selection.trim().parse::<usize>() {
+                        Ok(num) if num < m.len() => {
+                            valid = true;
+                            selection_index = num;
                         }
-                    }
+                        Ok(_) => {
+                            log::warn("Invalid index selected");
+                        }
+                        Err(_) => {
+                            log::warn("Invalid input received. Input must be a positive integer or 'all'");
+                        }
+                    },
                     Err(_) => {
                         log::warn("Failed to read input");
                     }
@@ -141,7 +144,10 @@ pub fn list_callback(_config: &config::Config) -> Result<(), String> {
 ///
 /// Will error if a single module cannot be resolved from the specified name,
 /// or if the call to [`Module.download`] fails.
-pub fn download_module(partials: &[&str], _config: &config::Config) -> Result<(), String> {
+pub fn download_module(
+    partials: &[&str],
+    _config: &config::Config,
+) -> Result<(), String> {
     resolver_boilerplate(partials, module::download)
 }
 
@@ -164,7 +170,10 @@ pub fn download_all(_config: &config::Config) -> Result<(), String> {
 ///
 /// Errors if a single module cannot be resolved from the specified name,
 /// or if the call to [`Module.build`] fails.
-pub fn build_module(partials: &[&str], _config: &config::Config) -> Result<(), String> {
+pub fn build_module(
+    partials: &[&str],
+    _config: &config::Config,
+) -> Result<(), String> {
     resolver_boilerplate(partials, module::build)
 }
 
@@ -187,11 +196,17 @@ pub fn build_all(_config: &config::Config) -> Result<(), String> {
 ///
 /// Returns [`Err(string)`] if a single module cannot be resolved from the
 /// specified name, or if the call to [`Module.install`] fails.
-pub fn install_module(partials: &[&str], _config: &config::Config) -> Result<(), String> {
+pub fn install_module(
+    partials: &[&str],
+    _config: &config::Config,
+) -> Result<(), String> {
     resolver_boilerplate(partials, module::install)
 }
 
-pub fn write_modulefile(partials: &[&str], _config: &config::Config) -> Result<(), String> {
+pub fn write_modulefile(
+    partials: &[&str],
+    _config: &config::Config,
+) -> Result<(), String> {
     resolver_boilerplate(partials, module::modulefile)
 }
 

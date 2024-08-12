@@ -1,7 +1,10 @@
-use crate::{builders::builder_trait::BuilderImpl, cli::child_logger, log, shell::Shell};
-use pyo3::prelude::PyAnyMethods;
-use pyo3::{Bound, PyAny};
 use std::{fs, path, path::Path, process::Command};
+
+use pyo3::{prelude::PyAnyMethods, Bound, PyAny};
+
+use crate::{
+    builders::builder_trait::BuilderImpl, cli::child_logger, log, shell::Shell,
+};
 
 #[derive(Debug, Clone)]
 pub struct Make {
@@ -26,14 +29,21 @@ impl Make {
 
         fs::create_dir_all(build_path).map_err(|e| e.to_string())?;
 
-        let source_path = path::absolute(source_path).map_err(|err| err.to_string())?;
-        let build_path = path::absolute(build_path).map_err(|err| err.to_string())?;
-        let install_path = path::absolute(install_path).map_err(|err| err.to_string())?;
+        let source_path =
+            path::absolute(source_path).map_err(|err| err.to_string())?;
+        let build_path =
+            path::absolute(build_path).map_err(|err| err.to_string())?;
+        let install_path =
+            path::absolute(install_path).map_err(|err| err.to_string())?;
 
         let mut shell = Shell::default();
         shell.set_current_dir(&build_path);
 
+        println!("Module Source: {source_path:?}");
+        println!("{dependencies:?}");
+
         for dep in dependencies {
+            log::info(&format!("Loading module: {dep}"));
             shell.add_command(&format!("module load {dep}"));
         }
 
@@ -99,9 +109,13 @@ impl BuilderImpl for Make {
     fn from_py(object: &Bound<PyAny>) -> Result<Self, String> {
         let configure: bool = object
             .getattr("configure")
-            .map_err(|_| "Failed to read attribute 'configure' of Builder object")?
+            .map_err(|_| {
+                "Failed to read attribute 'configure' of Builder object"
+            })?
             .extract()
-            .map_err(|_| "Failed to convert attribute 'configure' to Rust bool")?;
+            .map_err(|_| {
+                "Failed to convert attribute 'configure' to Rust bool"
+            })?;
 
         let jobs: usize = object
             .getattr("jobs")
@@ -115,11 +129,7 @@ impl BuilderImpl for Make {
             .extract()
             .map_err(|_| "Failed to convert attribute 'configure_flags' to Rust Vec<String>")?;
 
-        Ok(Self {
-            configure,
-            jobs,
-            configure_flags,
-        })
+        Ok(Self { configure, jobs, configure_flags })
     }
 
     fn build<
@@ -145,13 +155,17 @@ impl BuilderImpl for Make {
         install_path: &P2,
         dependencies: &[String],
     ) -> Result<(), String> {
-        let build_path = path::absolute(build_path).map_err(|err| err.to_string())?;
-        let install_path = path::absolute(install_path).map_err(|err| err.to_string())?;
+        let build_path =
+            path::absolute(build_path).map_err(|err| err.to_string())?;
+        let install_path =
+            path::absolute(install_path).map_err(|err| err.to_string())?;
 
         fs::create_dir_all(install_path).map_err(|e| e.to_string())?;
 
         if !build_path.exists() {
-            return Err(format!("Source directory {build_path:?} does not exist"));
+            return Err(format!(
+                "Source directory {build_path:?} does not exist"
+            ));
         }
 
         let mut shell = Shell::default();

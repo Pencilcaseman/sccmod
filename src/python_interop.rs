@@ -1,6 +1,6 @@
+use std::{fs::read_to_string, path::Path};
+
 use pyo3::prelude::*;
-use std::fs::read_to_string;
-use std::path::Path;
 
 /// Load a Python program from a file path.
 ///
@@ -17,8 +17,9 @@ pub fn load_program<'a, P: AsRef<Path> + std::fmt::Debug>(
     let file = read_to_string(path).map_err(|err| err.to_string())?;
     let code = format!("import sys\nsys.path.append('{source_dir}')\n{file}");
 
-    PyModule::from_code_bound(*py, &code, "", "")
-        .map_err(|err| format!("Failed to load python program '{path:?}': {err}"))
+    PyModule::from_code_bound(*py, &code, "", "").map_err(|err| {
+        format!("Failed to load python program '{path:?}': {err}")
+    })
 }
 
 /// Extract a named attribute of a Python object.
