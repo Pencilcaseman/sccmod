@@ -1,7 +1,9 @@
 use colored::Colorize;
-use pyo3::prelude::PyAnyMethods;
-use pyo3::types::{IntoPyDict, PyString};
-use pyo3::Python;
+use pyo3::{
+    prelude::PyAnyMethods,
+    types::{IntoPyDict, PyString},
+    Python,
+};
 
 const CRATE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -27,10 +29,11 @@ pub fn print() {
         let locals = [("os", os)].into_py_dict_bound(py);
         let code = "os.getenv('USER') or os.getenv('USERNAME') or 'Unknown'";
 
-        let user = py
-            .eval_bound(code, None, Some(&locals))
-            .unwrap_or_else(|_| {
-                crate::log::warn("Failed to extract user from Python environment variables");
+        let user =
+            py.eval_bound(code, None, Some(&locals)).unwrap_or_else(|_| {
+                crate::log::warn(
+                    "Failed to extract user from Python environment variables",
+                );
                 PyString::new_bound(py, "Unknown").into_any()
             });
 

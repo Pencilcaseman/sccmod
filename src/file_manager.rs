@@ -1,9 +1,10 @@
-use crate::log;
-use std::fs::DirEntry;
 use std::{
+    fs::DirEntry,
     path::{Path, PathBuf},
     process::Command,
 };
+
+use crate::log;
 
 /// Defines the path separator for a given operating system
 #[cfg(not(target_os = "windows"))]

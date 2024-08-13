@@ -1,5 +1,6 @@
-use colored::Colorize;
 use std::io::Write;
+
+use colored::Colorize;
 
 fn remove_tabs(txt: &str) -> String {
     txt.replace('\t', " ")

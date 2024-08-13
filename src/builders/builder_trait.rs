@@ -1,8 +1,11 @@
+use std::{fmt::Debug, path::Path};
+
+use pyo3::{
+    prelude::{PyAnyMethods, PyTypeMethods},
+    Bound, PyAny,
+};
+
 use crate::builders::{cmake::CMake, make::Make};
-use pyo3::prelude::{PyAnyMethods, PyTypeMethods};
-use pyo3::{Bound, PyAny};
-use std::fmt::Debug;
-use std::path::Path;
 
 pub trait BuilderImpl: Sized + Clone {
     /// Generate a builder object from a python object.
@@ -27,7 +30,11 @@ pub trait BuilderImpl: Sized + Clone {
     ///  - Source directory does not contain a valid build script configuration
     ///  - The code fails to compile
     ///  - The build files cannot be written to the build directory
-    fn build<P0: AsRef<Path> + Debug, P1: AsRef<Path> + Debug, P2: AsRef<Path>>(
+    fn build<
+        P0: AsRef<Path> + Debug,
+        P1: AsRef<Path> + Debug,
+        P2: AsRef<Path>,
+    >(
         &self,
         source_path: &P0,
         build_path: &P1,
@@ -73,7 +80,11 @@ impl BuilderImpl for Builder {
         }
     }
 
-    fn build<P0: AsRef<Path> + Debug, P1: AsRef<Path> + Debug, P2: AsRef<Path>>(
+    fn build<
+        P0: AsRef<Path> + Debug,
+        P1: AsRef<Path> + Debug,
+        P2: AsRef<Path>,
+    >(
         &self,
         source_path: &P0,
         build_path: &P1,
@@ -81,8 +92,12 @@ impl BuilderImpl for Builder {
         dependencies: &[String],
     ) -> Result<(), String> {
         match self {
-            Self::CMake(cmake) => cmake.build(source_path, build_path, install_path, dependencies),
-            Self::Make(make) => make.build(source_path, build_path, install_path, dependencies),
+            Self::CMake(cmake) => {
+                cmake.build(source_path, build_path, install_path, dependencies)
+            }
+            Self::Make(make) => {
+                make.build(source_path, build_path, install_path, dependencies)
+            }
         }
     }
 
@@ -94,10 +109,18 @@ impl BuilderImpl for Builder {
         dependencies: &[String],
     ) -> Result<(), String> {
         match self {
-            Self::CMake(cmake) => {
-                cmake.install(source_path, build_path, install_path, dependencies)
-            }
-            Self::Make(make) => make.install(source_path, build_path, install_path, dependencies),
+            Self::CMake(cmake) => cmake.install(
+                source_path,
+                build_path,
+                install_path,
+                dependencies,
+            ),
+            Self::Make(make) => make.install(
+                source_path,
+                build_path,
+                install_path,
+                dependencies,
+            ),
         }
     }
 }

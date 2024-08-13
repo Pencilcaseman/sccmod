@@ -205,7 +205,7 @@ impl DownloaderImpl for GitClone {
                 shell.set_current_dir(path);
                 shell.add_command("mkdir -p sccmod_patches");
                 shell.add_command("cd sccmod_patches");
-                shell.add_command(&format!("curl -Lo {patch}"));
+                shell.add_command(&format!("curl -LO {patch}"));
 
                 let (result, stdout, stderr) = shell.exec();
 

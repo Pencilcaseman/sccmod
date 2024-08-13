@@ -1,6 +1,8 @@
-use crate::module::Module;
 use std::fs;
+
 use toml::Table;
+
+use crate::module::Module;
 
 #[derive(Debug)]
 pub struct Config {
@@ -44,7 +46,10 @@ pub fn read() -> Result<Config, String> {
                 .map(|item| {
                     item.as_str()
                         .map(std::string::ToString::to_string)
-                        .ok_or_else(|| "`module_paths` must be an array of strings".to_string())
+                        .ok_or_else(|| {
+                            "`module_paths` must be an array of strings"
+                                .to_string()
+                        })
                 })
                 .collect()
         })?;

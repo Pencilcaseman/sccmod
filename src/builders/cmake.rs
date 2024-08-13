@@ -1,7 +1,11 @@
-use crate::{builders::builder_trait::BuilderImpl, file_manager::PATH_SEP, log, shell::Shell};
-use pyo3::prelude::PyAnyMethods;
-use pyo3::{Bound, PyAny};
 use std::{fs, path, path::Path};
+
+use pyo3::{prelude::PyAnyMethods, Bound, PyAny};
+
+use crate::{
+    builders::builder_trait::BuilderImpl, file_manager::PATH_SEP, log,
+    shell::Shell,
+};
 
 #[derive(Debug, Clone)]
 pub enum CMakeBuildType {
@@ -20,14 +24,19 @@ pub struct CMake {
 }
 
 impl CMake {
-    fn configure<P0: AsRef<Path> + std::fmt::Debug, P1: AsRef<Path> + std::fmt::Debug>(
+    fn configure<
+        P0: AsRef<Path> + std::fmt::Debug,
+        P1: AsRef<Path> + std::fmt::Debug,
+    >(
         &self,
         source_path: &P0,
         output_path: &P1,
         dependencies: &[String],
     ) -> Result<(), String> {
-        let source_path = path::absolute(source_path).map_err(|err| err.to_string())?;
-        let output_path = path::absolute(output_path).map_err(|err| err.to_string())?;
+        let source_path =
+            path::absolute(source_path).map_err(|err| err.to_string())?;
+        let output_path =
+            path::absolute(output_path).map_err(|err| err.to_string())?;
 
         // Attempt to create the output directory if necessary
         fs::create_dir_all(&output_path).map_err(|e| e.to_string())?;
@@ -47,7 +56,8 @@ impl CMake {
             }
         }
 
-        cmake_cmd.push_str(&format!(" -DCMAKE_BUILD_TYPE={:?}", self.build_type));
+        cmake_cmd
+            .push_str(&format!(" -DCMAKE_BUILD_TYPE={:?}", self.build_type));
         shell.add_command(&cmake_cmd);
 
         let (result, stdout, stderr) = shell.exec();
@@ -104,9 +114,13 @@ impl BuilderImpl for CMake {
     fn from_py(object: &Bound<PyAny>) -> Result<Self, String> {
         let build_type = match object
             .getattr("build_type")
-            .map_err(|_| "Failed to read attribute 'build_type' of Builder object")?
+            .map_err(|_| {
+                "Failed to read attribute 'build_type' of Builder object"
+            })?
             .extract::<String>()
-            .map_err(|_| "Failed to convert attribute 'build_type' to Rust String")?
+            .map_err(|_| {
+                "Failed to convert attribute 'build_type' to Rust String"
+            })?
             .to_lowercase()
             .as_str()
         {
@@ -131,16 +145,15 @@ impl BuilderImpl for CMake {
 
         let cmake_root: Option<String> = object
             .getattr("cmake_root")
-            .map_err(|_| "Failed to read attribute 'cmake_root' of Builder object")?
+            .map_err(|_| {
+                "Failed to read attribute 'cmake_root' of Builder object"
+            })?
             .extract()
-            .map_err(|_| "Failed to convert attribute 'cmake_root' to Rust String")?;
+            .map_err(|_| {
+                "Failed to convert attribute 'cmake_root' to Rust String"
+            })?;
 
-        Ok(Self {
-            build_type,
-            jobs,
-            configure_flags,
-            cmake_root,
-        })
+        Ok(Self { build_type, jobs, configure_flags, cmake_root })
     }
 
     fn build<
@@ -155,7 +168,9 @@ impl BuilderImpl for CMake {
         dependencies: &[String],
     ) -> Result<(), String> {
         let cmake_source_path = if let Some(root) = &self.cmake_root {
-            source_path.as_ref().to_str().unwrap().to_owned() + PATH_SEP.to_string().as_ref() + root
+            source_path.as_ref().to_str().unwrap().to_owned()
+                + PATH_SEP.to_string().as_ref()
+                + root
         } else {
             source_path.as_ref().to_str().unwrap().to_owned()
         };
@@ -172,13 +187,17 @@ impl BuilderImpl for CMake {
         install_path: &P2,
         dependencies: &[String],
     ) -> Result<(), String> {
-        let build_path = path::absolute(build_path).map_err(|err| err.to_string())?;
-        let install_path = path::absolute(install_path).map_err(|err| err.to_string())?;
+        let build_path =
+            path::absolute(build_path).map_err(|err| err.to_string())?;
+        let install_path =
+            path::absolute(install_path).map_err(|err| err.to_string())?;
 
         fs::create_dir_all(&install_path).map_err(|e| e.to_string())?;
 
         if !build_path.exists() {
-            return Err(format!("Build directory {build_path:?} does not exist"));
+            return Err(format!(
+                "Build directory {build_path:?} does not exist"
+            ));
         }
 
         let mut shell = Shell::default();
@@ -188,7 +207,9 @@ impl BuilderImpl for CMake {
             shell.add_command(&format!("module load {dep}"));
         }
 
-        shell.add_command(&format!("cmake --install . --prefix {install_path:?}"));
+        shell.add_command(&format!(
+            "cmake --install . --prefix {install_path:?}"
+        ));
 
         let (result, stdout, stderr) = shell.exec();
 

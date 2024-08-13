@@ -1,10 +1,12 @@
 // Long story short, Rust's std::process::Command doesn't let you do
 // what I need to do, so now this exists...
 
+use std::{
+    path::Path,
+    process::{Command, ExitStatus},
+};
+
 use crate::{cli::child_logger, config};
-use std::path::Path;
-use std::process::Command;
-use std::process::ExitStatus;
 
 pub enum ShellOutput {
     Success,
@@ -43,7 +45,13 @@ impl Shell {
         self.commands.push(cmd.to_string());
     }
 
-    pub fn exec(&self) -> (std::io::Result<ExitStatus>, Vec<String>, Vec<String>) {
+    pub fn get_commands(&self) -> &Vec<String> {
+        &self.commands
+    }
+
+    pub fn exec(
+        &self,
+    ) -> (std::io::Result<ExitStatus>, Vec<String>, Vec<String>) {
         // Instantiate shell
         let mut shell = Command::new(&self.shell);
         shell.stdin(std::process::Stdio::piped());

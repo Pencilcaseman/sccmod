@@ -5,7 +5,11 @@ use std::{path::Path, process::Command};
 /// # Errors
 ///
 /// Errors if the directory cannot be created or the file extraction command fails
-pub fn extract<P: AsRef<Path>>(path: &P, name: &str, archive_type: &str) -> Result<(), String> {
+pub fn extract<P: AsRef<Path>>(
+    path: &P,
+    name: &str,
+    archive_type: &str,
+) -> Result<(), String> {
     let mut command = match archive_type.to_lowercase().as_ref() {
         "tar" | "tar.gz" | "targz" | "tgz" => {
             let mut cmd = Command::new("tar");
