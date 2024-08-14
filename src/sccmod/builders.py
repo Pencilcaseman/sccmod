@@ -1,5 +1,7 @@
 class CMake:
-    def __init__(self, build_type="Release", jobs=8, configure_flags=None, cmake_root=None):
+    def __init__(
+        self, build_type="Release", jobs=8, configure_flags=None, cmake_root=None
+    ):
         self.build_type = build_type
         self.jobs = jobs
         self.configure_flags = configure_flags or []
@@ -7,7 +9,8 @@ class CMake:
 
 
 class Make:
-    def __init__(self, configure=True, jobs=8, configure_flags=None):
+    def __init__(self, configure=True, jobs=8, prefix_args=None, configure_flags=None):
         self.configure = configure
         self.jobs = jobs
+        self.prefix_args = prefix_args or []
         self.configure_flags = configure_flags or []

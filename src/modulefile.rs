@@ -1,11 +1,23 @@
-use crate::module::{Dependency, Environment, Module};
+use crate::{
+    config,
+    module::{Dependency, Environment, Module},
+};
 
 #[must_use]
 pub fn generate(module: &Module) -> String {
     // Generate a modulefile with support for flavours
     // The modulefile has the following format:
 
+    let config = config::read().unwrap();
+
     let module_class = &module.class;
+
+    let module_conflict =
+        if config.class_no_conflict.contains(&module_class.to_string()) {
+            String::new()
+        } else {
+            format!("::flavours::conflict -class {module_class}\n")
+        };
 
     let mut module_metadata_str = String::new();
     for (key, value) in &module.metadata {
@@ -53,7 +65,8 @@ pub fn generate(module: &Module) -> String {
     let mut environment_variables = String::new();
     for (key, value) in &module.environment {
         environment_variables.push_str(&match value {
-            Environment::Set(val) => format!("setenv \"{key}\" \"{val}\"\n"),
+            // Environment::Set(val) => format!("setenv \"{key}\" \"{val}\"\n"),
+            Environment::Set(val) => format!("::flavours::modify-path setenv \"{key}\" \"{val}\"\n"),
             Environment::Append(val) => format!("::flavours::append-path \"{key}\" \"{val}\"\n"),
             Environment::Prepend(val) => {
                 format!("::flavours::modify-path prepend-path \"{key}\" \"{val}\"\n")
@@ -111,7 +124,8 @@ module-whatis "{module_description}"
 {class_definitions}
 
 # Conflict with other modules of the same class
-::flavours::conflict -class {module_class}
+# ::flavours::conflict -class {module_class}
+{module_conflict}
 
 # Evaluate the flavour
 ::flavours::root     {root_dir}

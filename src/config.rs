@@ -11,6 +11,7 @@ pub struct Config {
     pub build_root: String,
     pub install_root: String,
     pub shell: String,
+    pub class_no_conflict: Vec<String>,
 }
 
 /// Read the sccmod configuration toml file and return the result.
@@ -74,11 +75,28 @@ pub fn read() -> Result<Config, String> {
         .ok_or_else(|| "`install_root` must be a string".to_string())?
         .to_string();
 
+    let class_no_conflict: Vec<String> = table["class_no_conflict"]
+        .as_array()
+        .ok_or_else(|| {
+            "`class_no_conflict` must be an array of strings".to_string()
+        })?
+        .iter()
+        .map(|item| {
+            item.as_str().map(std::string::ToString::to_string).ok_or_else(
+                || {
+                    "`class_no_conflict` must be an array of strings"
+                        .to_string()
+                },
+            )
+        })
+        .collect::<Result<Vec<String>, String>>()?;
+
     Ok(Config {
         sccmod_module_paths,
         modulefile_root,
         build_root,
         install_root,
         shell,
+        class_no_conflict,
     })
 }

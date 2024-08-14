@@ -10,6 +10,7 @@ use crate::{
 pub struct Make {
     pub configure: bool,
     pub jobs: usize,
+    pub prefix_args: Option<Vec<String>>,
     pub configure_flags: Option<Vec<String>>,
 }
 
@@ -47,7 +48,17 @@ impl Make {
             shell.add_command(&format!("module load {dep}"));
         }
 
-        let mut configure_cmd = format!("{source_path:?}/configure");
+        // let mut configure_cmd = format!("{source_path:?}/configure");
+
+        // Apply prefix args
+        let mut configure_cmd = String::new();
+        if let Some(args) = &self.prefix_args {
+            for arg in args {
+                configure_cmd.push_str(&format!("{arg} "));
+            }
+        }
+        configure_cmd
+            .push_str(&format!("{}/configure", source_path.to_str().unwrap()));
 
         if let Some(flags) = &self.configure_flags {
             for flag in flags {
@@ -123,13 +134,23 @@ impl BuilderImpl for Make {
             .extract()
             .map_err(|_| "Failed to convert attribute 'jobs' to Rust usize")?;
 
+        let prefix_args: Option<Vec<String>> = object
+            .getattr("prefix_args")
+            .map_err(|_| {
+                "Failed to read attribute 'prefix_args' of Builder object"
+            })?
+            .extract()
+            .map_err(|_| {
+                "Failed to convert attribute 'prefix_args' to Rust Vec<String>"
+            })?;
+
         let configure_flags: Option<Vec<String>> = object
             .getattr("configure_flags")
             .map_err(|_| "Failed to read attribute 'configure_flags' of Builder object")?
             .extract()
             .map_err(|_| "Failed to convert attribute 'configure_flags' to Rust Vec<String>")?;
 
-        Ok(Self { configure, jobs, configure_flags })
+        Ok(Self { configure, jobs, prefix_args, configure_flags })
     }
 
     fn build<
