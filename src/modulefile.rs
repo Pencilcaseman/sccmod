@@ -67,6 +67,7 @@ pub fn generate(module: &Module) -> String {
         environment_variables.push_str(&match value {
             // Environment::Set(val) => format!("setenv \"{key}\" \"{val}\"\n"),
             Environment::Set(val) => format!("::flavours::modify-path setenv \"{key}\" \"{val}\"\n"),
+            Environment::SetExact(val) => format!(" setenv \"{key}\" \"{val}\"\n"),
             Environment::Append(val) => format!("::flavours::append-path \"{key}\" \"{val}\"\n"),
             Environment::Prepend(val) => {
                 format!("::flavours::modify-path prepend-path \"{key}\" \"{val}\"\n")

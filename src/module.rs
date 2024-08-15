@@ -27,6 +27,7 @@ pub enum Dependency {
 #[derive(Debug, Clone)]
 pub enum Environment {
     Set(String),
+    SetExact(String),
     Append(String),
     Prepend(String),
 }
@@ -346,6 +347,7 @@ impl Module {
                 .into_iter()
                 .map(|(name, (op, value))| match op.as_ref() {
                     "set" => Ok((name, Environment::Set(value))),
+                    "setexact" => Ok((name, Environment::SetExact(value))),
                     "append" => Ok((name, Environment::Append(value))),
                     "prepend" => Ok((name, Environment::Prepend(value))),
                     other => Err(format!(
