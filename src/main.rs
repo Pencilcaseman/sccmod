@@ -98,7 +98,7 @@ fn cli(config: &config::Config) -> Result<(), String> {
             },
         ],
         arguments: vec![],
-        help: "A tool for managing and building modules",
+        help: "Automatically build and install modules for Environment Modules",
         callback: None,
     };
 
