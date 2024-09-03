@@ -45,6 +45,7 @@ impl CMake {
         shell.set_current_dir(&output_path.to_str().unwrap());
 
         for dep in dependencies {
+            log::info(&format!("Loading module: {dep}"));
             shell.add_command(&format!("module load {dep}"));
         }
 
