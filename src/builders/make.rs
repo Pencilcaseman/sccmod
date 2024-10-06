@@ -3,7 +3,8 @@ use std::{fs, path, path::Path, process::Command};
 use pyo3::{prelude::PyAnyMethods, Bound, PyAny};
 
 use crate::{
-    builders::builder_trait::BuilderImpl, cli::child_logger, log, shell::Shell,
+    builders::builder_trait::BuilderImpl, cli::child_logger,
+    file_manager::PATH_SEP, log, shell::Shell,
 };
 
 #[derive(Debug, Clone)]
