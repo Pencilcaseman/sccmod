@@ -12,6 +12,7 @@ pub struct Make {
     pub jobs: usize,
     pub prefix_args: Option<Vec<String>>,
     pub configure_flags: Option<Vec<String>>,
+    pub make_root: Option<String>,
 }
 
 impl Make {
@@ -150,7 +151,17 @@ impl BuilderImpl for Make {
             .extract()
             .map_err(|_| "Failed to convert attribute 'configure_flags' to Rust Vec<String>")?;
 
-        Ok(Self { configure, jobs, prefix_args, configure_flags })
+        let make_root: Option<String> = object
+            .getattr("make_root")
+            .map_err(|_| {
+                "Failed to read attribute 'make_root' of Builder object"
+            })?
+            .extract()
+            .map_err(|_| {
+                "Failed to convert attribute 'make_root' to Rust String"
+            })?;
+
+        Ok(Self { configure, jobs, prefix_args, configure_flags, make_root })
     }
 
     fn build<
@@ -164,7 +175,20 @@ impl BuilderImpl for Make {
         install_path: &P2,
         dependencies: &[String],
     ) -> Result<(), String> {
-        self.configure(source_path, build_path, install_path, dependencies)?;
+        let make_source_path = if let Some(root) = &self.make_root {
+            source_path.as_ref().to_str().unwrap().to_owned()
+                + PATH_SEP.to_string().as_ref()
+                + root
+        } else {
+            source_path.as_ref().to_str().unwrap().to_owned()
+        };
+
+        self.configure(
+            &make_source_path,
+            build_path,
+            install_path,
+            dependencies,
+        )?;
         self.compile(build_path, dependencies)?;
         Ok(())
     }

@@ -11,7 +11,7 @@ pub fn extract<P: AsRef<Path>>(
     archive_type: &str,
 ) -> Result<(), String> {
     let mut command = match archive_type.to_lowercase().as_ref() {
-        "tar" | "tar.gz" | "targz" | "tgz" => {
+        "tar" | "tar.gz" | "targz" | "tgz" | "tar.xz" | "txz" | "tarxz" => {
             let mut cmd = Command::new("tar");
             cmd.arg("-xvf"); // Extract verbose file
             cmd.arg(name); // File name
