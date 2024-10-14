@@ -19,6 +19,7 @@ pub enum CMakeBuildType {
 pub struct CMake {
     pub build_type: CMakeBuildType,
     pub jobs: usize,
+    pub prefix_args: Option<Vec<String>>,
     pub configure_flags: Option<Vec<String>>,
     pub cmake_root: Option<String>,
 }
@@ -49,7 +50,16 @@ impl CMake {
             shell.add_command(&format!("module load {dep}"));
         }
 
-        let mut cmake_cmd = format!("cmake {source_path:?}");
+        // let mut cmake_cmd = format!("cmake {source_path:?}");
+
+        let mut cmake_cmd = String::new();
+        if let Some(args) = &self.prefix_args {
+            for arg in args {
+                cmake_cmd.push_str(&format!("{arg} "));
+            }
+        }
+
+        cmake_cmd.push_str(&format!("cmake {source_path:?}"));
 
         if let Some(flags) = &self.configure_flags {
             for flag in flags {
@@ -138,6 +148,16 @@ impl BuilderImpl for CMake {
             .extract()
             .map_err(|_| "Failed to convert attribute 'jobs' to Rust usize")?;
 
+        let prefix_args: Option<Vec<String>> = object
+            .getattr("prefix_args")
+            .map_err(|_| {
+                "Failed to read attribute 'prefix_args' of Builder object"
+            })?
+            .extract()
+            .map_err(|_| {
+                "Failed to convert attribute 'prefix_args' to Rust Vec<String>"
+            })?;
+
         let configure_flags: Option<Vec<String>> = object
             .getattr("configure_flags")
             .map_err(|_| "Failed to read attribute 'configure_flags' of Builder object")?
@@ -154,7 +174,7 @@ impl BuilderImpl for CMake {
                 "Failed to convert attribute 'cmake_root' to Rust String"
             })?;
 
-        Ok(Self { build_type, jobs, configure_flags, cmake_root })
+        Ok(Self { build_type, jobs, prefix_args, configure_flags, cmake_root })
     }
 
     fn build<
