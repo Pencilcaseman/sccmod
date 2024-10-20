@@ -88,7 +88,8 @@ pub fn resolver_boilerplate(
                     }
                 }
 
-                selection.clear(); // Clear the input buffer for the next iteration
+                selection.clear(); // Clear the input buffer for the next
+                                   // iteration
             }
 
             if all {
@@ -103,6 +104,14 @@ pub fn resolver_boilerplate(
         }
         module_resolver::ResolveMatch::None => {
             log::error("No modules match the partials provided");
+        }
+
+        module_resolver::ResolveMatch::All(m) => {
+            for module in &m {
+                func(module)?;
+            }
+
+            Ok(())
         }
     }
 }

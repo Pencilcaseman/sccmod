@@ -6,6 +6,7 @@ use crate::{
 pub enum ResolveMatch {
     Full(Module),
     Partial(Vec<Module>),
+    All(Vec<Module>),
     None,
 }
 
@@ -16,6 +17,17 @@ pub enum ResolveMatch {
 /// # Errors
 /// Will error if the modules cannot be listed.
 pub fn resolve(partials: &[&str]) -> Result<ResolveMatch, String> {
+    // Allow passing `ALL` as the last argument to install all matching
+    // modules
+
+    let mut partials = partials.to_vec();
+    let mut all = false;
+    if partials[partials.len() - 1] == "ALL" {
+        // Remove `--all` from the list of partials
+        partials.pop();
+        all = true;
+    }
+
     let mut results: Vec<Module> = get_modules()?
         .into_iter()
         .filter(|module| {
@@ -34,6 +46,7 @@ pub fn resolve(partials: &[&str]) -> Result<ResolveMatch, String> {
             || log::error("An internal error has occurred"),
             |x| x,
         ))),
-        _ => Ok(ResolveMatch::Partial(results)),
+        _ if !all => Ok(ResolveMatch::Partial(results)),
+        _ => Ok(ResolveMatch::All(results)),
     }
 }
