@@ -18,7 +18,7 @@ pub enum CMakeBuildType {
 #[derive(Debug, Clone)]
 pub struct CMake {
     pub build_type: CMakeBuildType,
-    pub jobs: usize,
+    pub jobs: Option<usize>,
     pub prefix_args: Option<Vec<String>>,
     pub configure_flags: Option<Vec<String>>,
     pub cmake_root: Option<String>,
@@ -101,8 +101,13 @@ impl CMake {
         }
 
         shell.add_command(&format!(
-            "cmake --build . --config {:?} --parallel {:?}",
-            self.build_type, self.jobs
+            "cmake --build . --config {:?} --parallel {}",
+            self.build_type,
+            if let Some(jobs) = &self.jobs {
+                format!("{jobs}")
+            } else {
+                "".to_string()
+            }
         ));
 
         let (result, stdout, stderr) = shell.exec();
@@ -142,11 +147,20 @@ impl BuilderImpl for CMake {
             other => log::error(&format!("Unknown CMake build type {other}")),
         };
 
-        let jobs: usize = object
+        // let jobs: usize = object
+        //     .getattr("jobs")
+        //     .map_err(|_| "Failed to read attribute 'jobs' of Builder
+        // object")?     .extract()
+        //     .map_err(|_| "Failed to convert attribute 'jobs' to Rust
+        // usize")?;
+
+        let jobs: Option<usize> = object
             .getattr("jobs")
             .map_err(|_| "Failed to read attribute 'jobs' of Builder object")?
             .extract()
-            .map_err(|_| "Failed to convert attribute 'jobs' to Rust usize")?;
+            .map_err(|_| {
+                "Failed to convert attribute 'jobs' to Rust Option<usize>"
+            })?;
 
         let prefix_args: Option<Vec<String>> = object
             .getattr("prefix_args")

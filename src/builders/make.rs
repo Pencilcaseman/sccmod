@@ -10,7 +10,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Make {
     pub configure: bool,
-    pub jobs: usize,
+    pub jobs: Option<usize>,
     pub prefix_args: Option<Vec<String>>,
     pub configure_flags: Option<Vec<String>>,
     pub make_root: Option<String>,
@@ -49,8 +49,6 @@ impl Make {
             log::info(&format!("Loading module: {dep}"));
             shell.add_command(&format!("module load {dep}"));
         }
-
-        // let mut configure_cmd = format!("{source_path:?}/configure");
 
         // Apply prefix args
         let mut configure_cmd = String::new();
@@ -101,7 +99,15 @@ impl Make {
         }
 
         shell.set_current_dir(&path.as_ref().to_str().unwrap());
-        shell.add_command(&format!("make -j {}", self.jobs));
+
+        shell.add_command(&format!(
+            "make -j {}",
+            if let Some(jobs) = &self.jobs {
+                format!("{jobs}")
+            } else {
+                "".to_string()
+            }
+        ));
 
         let (result, stdout, stderr) = shell.exec();
         let result = result.map_err(|_| "Failed to run make")?;
@@ -130,11 +136,20 @@ impl BuilderImpl for Make {
                 "Failed to convert attribute 'configure' to Rust bool"
             })?;
 
-        let jobs: usize = object
+        // let jobs: usize = object
+        //     .getattr("jobs")
+        //     .map_err(|_| "Failed to read attribute 'jobs' of Builder
+        // object")?     .extract()
+        //     .map_err(|_| "Failed to convert attribute 'jobs' to Rust
+        // usize")?;
+
+        let jobs: Option<usize> = object
             .getattr("jobs")
             .map_err(|_| "Failed to read attribute 'jobs' of Builder object")?
             .extract()
-            .map_err(|_| "Failed to convert attribute 'jobs' to Rust usize")?;
+            .map_err(|_| {
+                "Failed to convert attribute 'jobs' to Rust Option<usize>"
+            })?;
 
         let prefix_args: Option<Vec<String>> = object
             .getattr("prefix_args")
