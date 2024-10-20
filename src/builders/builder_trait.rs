@@ -10,22 +10,24 @@ use crate::builders::{cmake::CMake, make::Make};
 pub trait BuilderImpl: Sized + Clone {
     /// Generate a builder object from a python object.
     ///
-    /// Returns [`Ok(obj)`] if the operation was successful, otherwise [`Err(string)`]
+    /// Returns [`Ok(obj)`] if the operation was successful, otherwise
+    /// [`Err(string)`]
     ///
     /// # Errors
-    /// Errors if any attribute cannot be extracted or converted, or if the provided
-    /// object is invalid.
+    /// Errors if any attribute cannot be extracted or converted, or if the
+    /// provided object is invalid.
     fn from_py(object: &Bound<PyAny>) -> Result<Self, String>;
 
     /// Perform the build operation specified by the struct.
     ///
     /// For example, if this is a [`CMake`] instance, `cmake` is run on the
-    /// `source_path` and the resulting build files are written to `output_path`.
+    /// `source_path` and the resulting build files are written to
+    /// `output_path`.
     ///
     /// # Errors
     ///
-    /// Returns [`Err(string)`] if the build script fails to run. This could happen
-    /// for many reasons, including:
+    /// Returns [`Err(string)`] if the build script fails to run. This could
+    /// happen for many reasons, including:
     ///  - Source directory does not exist
     ///  - Source directory does not contain a valid build script configuration
     ///  - The code fails to compile
@@ -44,8 +46,9 @@ pub trait BuilderImpl: Sized + Clone {
 
     /// Perform the install operation specified by the struct.
     ///
-    /// For example, if this is a [`CMake`] instance, `cmake --install ...` is run
-    /// on the `build_path` and the install files are installed in `install_path`.
+    /// For example, if this is a [`CMake`] instance, `cmake --install ...` is
+    /// run on the `build_path` and the install files are installed in
+    /// `install_path`.
     ///
     /// # Errors
     ///

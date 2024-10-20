@@ -117,8 +117,9 @@ impl Module {
     /// Download the source code for the module, based on its [`Downloader`].
     ///
     /// # Errors
-    /// This will error if the download fails, with an error [`String`] containing
-    /// either an error message or the output of the errored command.
+    /// This will error if the download fails, with an error [`String`]
+    /// containing either an error message or the output of the errored
+    /// command.
     pub fn download(&self) -> Result<(), String> {
         if let Some(downloader) = &self.downloader {
             downloader.download(&self.source_path)
@@ -186,8 +187,9 @@ impl Module {
     /// Install the source code for this module based on its [`Builder`].
     ///
     /// # Errors
-    /// Errors if the installation fails. The [`Result`] output contains a [`String`]
-    /// with either an error message or the output of the errored program.
+    /// Errors if the installation fails. The [`Result`] output contains a
+    /// [`String`] with either an error message or the output of the errored
+    /// program.
     pub fn install(&self, flavour: (&[Module], usize)) -> Result<(), String> {
         if let Some(builder) = &self.builder {
             let (_, build_path, install_path, modules) = self.parse(&flavour);

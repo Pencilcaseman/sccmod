@@ -4,7 +4,8 @@ use std::{path::Path, process::Command};
 ///
 /// # Errors
 ///
-/// Errors if the directory cannot be created or the file extraction command fails
+/// Errors if the directory cannot be created or the file extraction command
+/// fails
 pub fn extract<P: AsRef<Path>>(
     path: &P,
     name: &str,

@@ -15,7 +15,8 @@ pub static PATH_SEP: char = '/';
 /// Return a vector of all items in a nested folder structure
 ///
 /// # Panics
-/// - If an item is found and its nature cannot be determined (file, folder, etc.)
+/// - If an item is found and its nature cannot be determined (file, folder,
+///   etc.)
 pub fn recursive_list_dir<P: AsRef<Path>>(root: &P) -> Option<Vec<DirEntry>> {
     let root = std::fs::read_dir(root);
     if let Err(msg) = root {

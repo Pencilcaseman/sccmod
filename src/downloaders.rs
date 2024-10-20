@@ -7,9 +7,10 @@ use crate::{archive, file_manager, log, shell::Shell};
 const FILE_NAME: &str = "curl_download_result";
 
 pub trait DownloaderImpl: Sized + Clone {
-    /// Convert from a Python `Downloader` instance to a Rust [`Downloader`] instance.
-    /// If this is not possible (due to an invalid value, for example), [`Err`] is returned
-    /// containing an error message as a [`String`]
+    /// Convert from a Python `Downloader` instance to a Rust [`Downloader`]
+    /// instance. If this is not possible (due to an invalid value, for
+    /// example), [`Err`] is returned containing an error message as a
+    /// [`String`]
     ///
     /// # Note
     /// `object` must be a valid `Downloader` instance in Python.
@@ -21,13 +22,13 @@ pub trait DownloaderImpl: Sized + Clone {
 
     /// Download the source code into the specified `path`.
     ///
-    /// If the action is performed successfully, the path specified by [`path`] will contain the
-    /// source code (or binaries, depending on the [`Downloader`] implementation) of the requested
-    /// program.
+    /// If the action is performed successfully, the path specified by [`path`]
+    /// will contain the source code (or binaries, depending on the
+    /// [`Downloader`] implementation) of the requested program.
     ///
     /// # Errors
-    /// The function will return [`Err::<String>`], where the [`String`] contains an appropriate
-    /// error message.
+    /// The function will return [`Err::<String>`], where the [`String`]
+    /// contains an appropriate error message.
     fn download<P: AsRef<Path>>(&self, path: &P) -> Result<(), String>;
 }
 
@@ -114,7 +115,8 @@ impl DownloaderImpl for GitClone {
     fn download<P: AsRef<Path>>(&self, path: &P) -> Result<(), String> {
         // Check if the directory already exists
 
-        // let skip_clone = std::fs::try_exists(path).map_err(|err| err.to_string())?;
+        // let skip_clone = std::fs::try_exists(path).map_err(|err|
+        // err.to_string())?;
 
         let skip_clone =
             std::fs::exists(path).map_err(|err| err.to_string())?;
@@ -256,20 +258,21 @@ impl DownloaderImpl for GitClone {
             // ))
             // .unwrap()
             // {
-            //     log::info(&format!("Applying patch: {:?}", file.file_name()));
+            //     log::info(&format!("Applying patch: {:?}",
+            // file.file_name()));
             //
             //     let mut shell = Shell::default();
             //     shell.set_current_dir(path);
             //     shell.add_command(&format!(
-            //         "git apply --reject --whitespace=fix sccmod_patches/{:?}",
-            //         file.file_name()
+            //         "git apply --reject --whitespace=fix
+            // sccmod_patches/{:?}",         file.file_name()
             //     ));
             //
             //     let (result, _, _) = shell.exec();
             //
             //     if result.is_err() || !result.unwrap().success() {
-            //         log::warn("Errors when applying patch. Proceed with caution.");
-            //     }
+            //         log::warn("Errors when applying patch. Proceed with
+            // caution.");     }
             // }
         }
 
@@ -310,7 +313,8 @@ impl DownloaderImpl for Curl {
     }
 
     fn download<P: AsRef<Path>>(&self, path: &P) -> Result<(), String> {
-        // Todo: Check if the hashes match. If they do, there is no need to re-download
+        // Todo: Check if the hashes match. If they do, there is no need to
+        // re-download
 
         // Ensure the directory exists
         fs::create_dir_all(path).map_err(|e| e.to_string())?;
