@@ -3,7 +3,7 @@ use std::{fs, path, path::Path};
 use pyo3::{prelude::PyAnyMethods, Bound, PyAny};
 
 use crate::{
-    builders::builder_trait::BuilderImpl, file_manager::PATH_SEP, log,
+    builders::builder_trait::BuilderImpl, config, file_manager::PATH_SEP, log,
     shell::Shell,
 };
 
@@ -94,6 +94,8 @@ impl CMake {
         path: &P,
         dependencies: &[String],
     ) -> Result<(), String> {
+        let config = config::read().unwrap();
+
         let mut shell = Shell::default();
         shell.set_current_dir(&path.as_ref().to_str().unwrap());
         for dep in dependencies {
@@ -104,9 +106,9 @@ impl CMake {
             "cmake --build . --config {:?} --parallel {}",
             self.build_type,
             if let Some(jobs) = &self.jobs {
-                format!("{jobs}")
+                jobs
             } else {
-                "".to_string()
+                &config.num_threads
             }
         ));
 

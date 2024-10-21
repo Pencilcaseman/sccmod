@@ -12,6 +12,7 @@ pub struct Config {
     pub install_root: String,
     pub shell: String,
     pub class_no_conflict: Vec<String>,
+    pub num_threads: usize,
 }
 
 /// Read the sccmod configuration toml file and return the result.
@@ -91,6 +92,17 @@ pub fn read() -> Result<Config, String> {
         })
         .collect::<Result<Vec<String>, String>>()?;
 
+    let num_threads: usize = table["num_threads"]
+        .as_integer()
+        .ok_or_else(|| "`num_threads` must be an integer".to_string())?
+        .try_into()
+        .map_err(|_| "`num_threads` must be a positive integer".to_string())?;
+
+    // .or(Some(64i64))
+    // .ok_or_else(|| "`num_threads` must be an integer".to_string())?
+    // .try_into()
+    // .map_err(|_| "`num_threads` must be a positive integer".to_string())?;
+
     Ok(Config {
         sccmod_module_paths,
         modulefile_root,
@@ -98,5 +110,6 @@ pub fn read() -> Result<Config, String> {
         install_root,
         shell,
         class_no_conflict,
+        num_threads,
     })
 }

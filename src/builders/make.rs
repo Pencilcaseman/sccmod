@@ -3,7 +3,7 @@ use std::{fs, path, path::Path, process::Command};
 use pyo3::{prelude::PyAnyMethods, Bound, PyAny};
 
 use crate::{
-    builders::builder_trait::BuilderImpl, cli::child_logger,
+    builders::builder_trait::BuilderImpl, cli::child_logger, config,
     file_manager::PATH_SEP, log, shell::Shell,
 };
 
@@ -91,6 +91,7 @@ impl Make {
         dependencies: &[String],
     ) -> Result<(), String> {
         log::status("Running make");
+        let config = config::read().unwrap();
 
         let mut shell = Shell::default();
 
@@ -103,9 +104,9 @@ impl Make {
         shell.add_command(&format!(
             "make -j {}",
             if let Some(jobs) = &self.jobs {
-                format!("{jobs}")
+                jobs
             } else {
-                "".to_string()
+                &config.num_threads
             }
         ));
 

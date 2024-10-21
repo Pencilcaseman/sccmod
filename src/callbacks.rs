@@ -128,6 +128,7 @@ pub fn info(config: &config::Config) -> Result<(), String> {
     fmt("build_root  . . . . :", &config.build_root);
     fmt("install_root  . . . :", &config.install_root);
     fmt("shell . . . . . . . :", &config.shell);
+    fmt("num_threads . . . . :", &config.num_threads);
 
     Ok(())
 }
